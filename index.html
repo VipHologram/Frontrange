@@ -39,14 +39,13 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .fld input{width:100%;padding:10px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);outline:none}
 .auth-btn{width:100%;padding:11px;background:var(--gold);border:none;border-radius:30px;font-weight:700;color:#000;cursor:pointer;margin-top:8px}
 .err-msg{font-size:.73rem;color:var(--red);margin-top:6px;display:none;padding:7px 12px;background:rgba(240,77,77,.09);border-radius:8px}
-.err-msg.on{display:block}
 
 .sidebar{width:256px;background:var(--surface);border-right:1px solid var(--border);position:fixed;height:100vh;z-index:200;overflow-y:auto;transition:transform .25s}
 .sb-head{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
 .sb-brand{font-family:'Fraunces',serif;font-size:1.28rem;color:var(--gold)}
 .sb-co{font-size:.67rem;display:block;color:var(--t3)}
 .sb-nav{padding:10px 8px;flex:1}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;color:var(--t2);font-weight:500;cursor:pointer;margin-bottom:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;color:var(--t2);font-weight:500;cursor:pointer;margin-bottom:2px;position:relative}
 .nav-item:hover{background:var(--s2);color:var(--text)}
 .nav-item.on{background:var(--gold-dim);color:var(--gold)}
 .nav-item.on::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;background:var(--gold);border-radius:0 3px 3px 0}
@@ -90,11 +89,6 @@ th{text-align:left;padding:12px 10px;font-size:.7rem;text-transform:uppercase;co
 td{padding:12px 10px;border-bottom:1px solid var(--border);color:var(--t2);font-size:.82rem}
 tr:hover td{background:var(--s2)}
 .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.67rem;font-weight:700}
-.b-admin{background:rgba(240,77,77,.1);color:var(--red)}
-.b-subadmin{background:rgba(155,109,255,.1);color:var(--purple)}
-.b-broker{background:rgba(75,140,247,.1);color:var(--blue)}
-.b-pending{background:rgba(232,160,32,.1);color:var(--gold)}
-.b-approved{background:rgba(39,201,138,.1);color:var(--green)}
 .sdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
 .d-green{background:#16a34a}.d-orange{background:#ea580c}.d-red{background:#dc2626}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -111,6 +105,9 @@ tr:hover td{background:var(--s2)}
 .toast-ok{background:rgba(39,201,138,.12);border-color:rgba(39,201,138,.3);color:var(--green)}
 .toast-err{background:rgba(240,77,77,.12);border-color:rgba(240,77,77,.3);color:var(--red)}
 .stock-input{width:80px;padding:5px 8px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;color:var(--text);text-align:center}
+.img-gallery{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.img-thumb{width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid var(--border);cursor:pointer}
+.img-thumb:hover{border-color:var(--gold);transform:scale(1.05)}
 .img-url-row{display:flex;gap:6px;align-items:center;margin-bottom:7px}
 .img-url-row input{flex:1;padding:8px 11px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;color:var(--text);outline:none}
 .log-row{display:grid;grid-template-columns:148px 120px 125px 1fr;gap:9px;padding:8px 9px;border-bottom:1px solid var(--border);font-size:.77rem}
@@ -157,15 +154,19 @@ const isAdminLike = () => ['admin','subadmin'].includes(CU?.role);
 const canEdit = () => CU?.role === 'admin';
 const isAdminOrSubAdmin = () => ['admin','subadmin'].includes(CU?.role);
 
-const SK = {U:'ff_u',F:'ff_f',L:'ff_l',CO:'ff_co',TH:'ff_th',ST:'ff_st',IM:'ff_im',AB:'ff_ab',GH:'ff_gh_url',GS2:'ff_gh_sha',CATS:'ff_cats'};
+const SK = {U:'ff_u',F:'ff_f',L:'ff_l',CO:'ff_co',TH:'ff_th',ST:'ff_st',IM:'ff_im',AB:'ff_ab',GH:'ff_gh_url',GS2:'ff_gh_sha',CATS:'ff_cats',GL:'ff_gist_tok',GID:'ff_gist_id'};
 let DB={users:[],fabrics:[],logs:[],company:'FabricFlow'};
-let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='';
+let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='', GIST_TOKEN='', GIST_ID='';
+let _autoSyncTimer = null;
+const AUTO_SYNC_INTERVAL = 2 * 60 * 1000;
 
 async function initDB(){
   isDark = localStorage.getItem(SK.TH) !== 'light';
   applyTheme();
   GH_URL = localStorage.getItem(SK.GH) || '';
   GH_SHA = localStorage.getItem(SK.GS2) || '';
+  GIST_TOKEN = localStorage.getItem(SK.GL) || '';
+  GIST_ID = localStorage.getItem(SK.GID) || '';
   
   const su=localStorage.getItem(SK.U);
   if(su){ try{ DB.users=JSON.parse(su); }catch(e){} }
@@ -176,7 +177,11 @@ async function initDB(){
   STOCK = tryParse(localStorage.getItem(SK.ST), {});
   IMGS = tryParse(localStorage.getItem(SK.IM), {});
   
-  // Check for existing session
+  // Sync from Gist if configured
+  if(GIST_TOKEN && GIST_ID){
+    try{ await gistFetchAndApply(); }catch(e){ console.warn('Gist load failed:',e); }
+  }
+  
   const sess = sessionStorage.getItem('ffs');
   if(sess && !CU){ 
     try{
@@ -185,8 +190,8 @@ async function initDB(){
       if(f) CU=f;
     }catch(e){} 
   }
-  
   renderApp();
+  startAutoSync();
 }
 
 function tryParse(s, def){ try{ return s?JSON.parse(s):def; }catch(e){ return def; } }
@@ -218,6 +223,7 @@ function addLog(action,details){
 function applyTheme(){ document.documentElement.setAttribute('data-theme', isDark?'dark':'light'); }
 function toggleTheme(){ isDark=!isDark; applyTheme(); saveToLocal(); renderApp(); }
 
+// ========== AUTH ==========
 async function doLogin(){
   const id=document.getElementById('l-id').value.trim();
   const pw=document.getElementById('l-pw').value;
@@ -266,7 +272,7 @@ async function doRegister(){
     return; 
   }
   if(!validMob(mob)){ 
-    err.textContent='Invalid mobile'; 
+    err.textContent='Invalid mobile (10 digits, start 6-9)'; 
     err.classList.add('on'); 
     return; 
   }
@@ -286,6 +292,7 @@ async function doRegister(){
   addLog('REGISTER',`${name} as ${role}`);
   showToast('Registered! Awaiting admin approval.');
   switchAuthTab('login');
+  renderApp();
 }
 
 function logout(){ 
@@ -300,6 +307,65 @@ function switchAuthTab(t){
   if(lf) lf.style.display = t==='login' ? 'block' : 'none';
   if(rf) rf.style.display = t==='register' ? 'block' : 'none';
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.toggle('on',el.dataset.tab===t));
+}
+
+// ========== USER MANAGEMENT ==========
+function approveUser(id){ const u=DB.users.find(u=>u.id===id); if(u){u.status='approved';saveToLocal();addLog('APPROVE',u.fullName);showToast(`Approved ${u.fullName}`);renderApp();} }
+function rejectUser(id){ const u=DB.users.find(u=>u.id===id); DB.users=DB.users.filter(u=>u.id!==id); saveToLocal(); addLog('REJECT',u?.fullName||id); showToast('User rejected','err'); renderApp(); }
+function deactivateUser(id){ const u=DB.users.find(u=>u.id===id); if(u&&u.role!=='admin'){u.status='inactive';saveToLocal();addLog('DEACTIVATE',u.fullName);showToast(`${u.fullName} deactivated`);renderApp();} }
+function activateUser(id){ const u=DB.users.find(u=>u.id===id); if(u){u.status='approved';saveToLocal();addLog('ACTIVATE',u.fullName);showToast(`${u.fullName} activated`);renderApp();} }
+
+// ========== GIST SYNC (Shared Database) ==========
+async function gistFetchAndApply(){
+  const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
+    headers:{'Authorization':'token '+GIST_TOKEN,'Accept':'application/vnd.github.v3+json'}
+  });
+  if(!r.ok) throw new Error('Gist fetch failed');
+  const gist = await r.json();
+  const file = gist.files && gist.files['fabricflow_db.json'];
+  if(file && file.content){
+    const data = JSON.parse(file.content);
+    if(data.users) DB.users = data.users;
+    if(data.fabrics) DB.fabrics = data.fabrics;
+    if(data.logs) DB.logs = data.logs;
+    if(data.company) DB.company = data.company;
+    if(data.stock) STOCK = data.stock;
+    if(data.imgs) IMGS = data.imgs;
+    if(data.gh_url) GH_URL = data.gh_url;
+    saveToLocal();
+    renderApp();
+  }
+}
+
+async function saveToGist(){
+  if(!GIST_TOKEN) return;
+  const payload = {
+    users: DB.users, fabrics: DB.fabrics, logs: DB.logs.slice(0,200),
+    company: DB.company, stock: STOCK, imgs: IMGS, gh_url: GH_URL,
+    saved_at: new Date().toISOString()
+  };
+  const body = {files:{'fabricflow_db.json':{content:JSON.stringify(payload,null,2)}}};
+  if(!GIST_ID){
+    body.description = 'FabricFlow Shared Database';
+    body.public = false;
+    const r = await fetch('https://api.github.com/gists',{
+      method:'POST',
+      headers:{'Authorization':'token '+GIST_TOKEN,'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if(!r.ok) throw new Error('Gist creation failed');
+    const g = await r.json();
+    GIST_ID = g.id;
+    localStorage.setItem(SK.GID, GIST_ID);
+  } else {
+    const r = await fetch('https://api.github.com/gists/'+GIST_ID,{
+      method:'PATCH',
+      headers:{'Authorization':'token '+GIST_TOKEN,'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    if(!r.ok) throw new Error('Gist update failed');
+  }
+  addLog('GIST_SYNC','Database synced to GitHub Gist');
 }
 
 // ========== STOCK PARSING ==========
@@ -320,6 +386,114 @@ function parseStockJSON(json){
     stock[name].push({design, qty, unit, comment});
   });
   return stock;
+}
+
+// ========== CSV IMPORT WITH IMAGE LINKS ==========
+function parseCSVRow(line){
+  const out=[]; let cur='', q=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'&&q&&line[i+1]==='"'){ cur+='"'; i++; }
+    else if(line[i]==='"'){ q=!q; }
+    else if(line[i]===','&&!q){ out.push(cur.trim()); cur=''; }
+    else cur+=line[i];
+  }
+  out.push(cur.trim()); return out;
+}
+
+function downloadSampleCSV(){
+  const headers=['SN','NAME','GSM','WIDTH','COMPOSITION','HF','RATE','CATEGORY','IMAGE LINK'];
+  const sample=[['1001','BARBIE','180','58/60','100% Polyester','Soft','₹189/yd','Ladies','https://i.ibb.co/example1.jpg']];
+  const csv='\uFEFF'+[headers.join(','),...sample.map(r=>r.map(x=>`"${x}"`).join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='fabric_import_sample.csv'; a.click();
+  showToast('Sample CSV downloaded (includes IMAGE LINK column)');
+}
+
+async function importCatalogCSV(file){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const lines=e.target.result.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+        if(lines.length<2) throw new Error('Empty CSV');
+        const rawH=parseCSVRow(lines[0]).map(h=>h.toUpperCase().replace(/[^A-Z]/g,''));
+        const hIdx={};
+        ['SN','NAME','GSM','WIDTH','COMPOSITION','HF','RATE','CATEGORY','IMAGE','IMAGELINK','IMAGE LINK'].forEach(k=>{
+          const idx=rawH.indexOf(k); if(idx>=0) hIdx[k]=idx;
+          const spaced=rawH.indexOf(k.replace('LINK',' LINK')); if(spaced>=0) hIdx[k]=spaced;
+        });
+        if(hIdx['SN']===undefined||hIdx['NAME']===undefined) throw new Error('CSV must have SN and NAME columns');
+        const get=(row,k)=>row[hIdx[k]]||'';
+        let added=0, skipped=0;
+        for(let i=1;i<lines.length;i++){
+          const row=parseCSVRow(lines[i]);
+          if(row.length<2) continue;
+          const sn=get(row,'SN'), name=get(row,'NAME');
+          if(!name) continue;
+          if(DB.fabrics.some(f=>f.name.toLowerCase()===name.toLowerCase()||(sn&&f.sn===sn))){ skipped++; continue; }
+          const nf={id:uid(),sn:sn||String(DB.fabrics.length+added+1),name,
+            cat:get(row,'CATEGORY'),gsm:get(row,'GSM'),width:get(row,'WIDTH'),
+            comp:get(row,'COMPOSITION'),hf:get(row,'HF'),rate:get(row,'RATE')};
+          DB.fabrics.push(nf);
+          // Handle image links (pipe-separated or single URL)
+          const imgLink=get(row,'IMAGELINK')||get(row,'IMAGE')||get(row,'IMAGE LINK');
+          const pipedUrls=imgLink?imgLink.split('|').map(u=>u.trim()).filter(u=>u.startsWith('http')):[];
+          if(pipedUrls.length) IMGS[nf.id]=pipedUrls;
+          added++;
+        }
+        saveToLocal(); addLog('IMPORT_CATALOG', `Added ${added}, skipped ${skipped}`);
+        res({added,skipped});
+      } catch(err){ rej(err); }
+    };
+    reader.onerror=rej;
+    reader.readAsText(file,'UTF-8');
+  });
+}
+
+async function handleCatalogImport(e){
+  const file=e.target.files[0]; if(!file) return;
+  try{
+    const r=await importCatalogCSV(file);
+    showToast(`Imported ${r.added} fabrics${r.skipped?`, ${r.skipped} duplicates skipped`:''}`);
+    addLog('IMPORT_CSV_OK', `File: ${file.name}`);
+    renderApp();
+  }catch(err){
+    showToast('Import error: '+err.message,'err');
+    addLog('IMPORT_CSV_ERR', err.message);
+  }
+  e.target.value='';
+}
+
+function exportFabricsCSV(){
+  const rows=DB.fabrics.map(f=>[f.sn,f.name,f.gsm,f.width,f.comp,f.hf,f.rate,f.cat||''].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const csv='\uFEFF'+['SN,NAME,GSM,WIDTH,COMPOSITION,HF,RATE,CATEGORY',...rows].join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`fabrics_${Date.now()}.csv`; a.click();
+  showToast(`Exported ${DB.fabrics.length} fabrics`);
+}
+
+function exportLogsCSV(){
+  const rows=DB.logs.map(l=>[l.time,l.userName,l.action,l.details].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const csv='\uFEFF'+['Time,User,Action,Details',...rows].join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`logs_${Date.now()}.csv`; a.click();
+  showToast(`Exported ${DB.logs.length} log entries`);
+}
+
+function clearLogs(){
+  if(!isAdmin()) return;
+  confirmModal('Clear All Logs','Permanently delete all logs?','danger',()=>{
+    DB.logs=[]; saveToLocal();
+    showToast('Logs cleared');
+    renderApp();
+  });
+}
+
+function renderLogTable(){
+  const wrap=document.getElementById('log-table-wrap'); if(!wrap) return;
+  const term=(document.getElementById('log-filter')?.value||'').toLowerCase();
+  const logs=term?DB.logs.filter(l=>(l.action+l.details+l.userName).toLowerCase().includes(term)):DB.logs;
+  if(!logs.length){ wrap.innerHTML='<div style="text-align:center;padding:32px">No logs found</div>'; return; }
+  wrap.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+    <tbody>${logs.slice(0,200).map(l=>`<tr><td style="white-space:nowrap">${esc(l.time)}</td><td>${esc(l.userName)}</td><td><span class="log-tag">${esc(l.action)}</span></td><td>${esc(l.details)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
 // ========== CATEGORY MANAGEMENT ==========
@@ -394,107 +568,16 @@ function saveStockCategory(fabricName){
   closeModal(); renderApp();
 }
 
-// ========== CSV IMPORT/EXPORT ==========
-function parseCSVRow(line){
-  const out=[]; let cur='', q=false;
-  for(let i=0;i<line.length;i++){
-    if(line[i]==='"'&&q&&line[i+1]==='"'){ cur+='"'; i++; }
-    else if(line[i]==='"'){ q=!q; }
-    else if(line[i]===','&&!q){ out.push(cur.trim()); cur=''; }
-    else cur+=line[i];
-  }
-  out.push(cur.trim()); return out;
+// ========== IMAGES ==========
+const getImages = id => IMGS[id]||[];
+function saveImages(id,urls){
+  const valid=urls.map(u=>san(u,500)).filter(u=>u.startsWith('http'));
+  if(valid.length) IMGS[id]=valid; else delete IMGS[id];
+  saveToLocal();
 }
+function addImageRow(){ const l=document.getElementById('img-url-list'); if(!l) return; const d=document.createElement('div'); d.className='img-url-row'; d.innerHTML=`<input placeholder="https://i.ibb.co/..."><button class="btn btn-sm btn-red" onclick="this.parentElement.remove()">Remove</button>`; l.appendChild(d); }
 
-function downloadSampleCSV(){
-  const headers=['SN','NAME','GSM','WIDTH','COMPOSITION','HF','RATE','CATEGORY'];
-  const sample=[['1001','BARBIE','180','58/60','100% Polyester','Soft','₹189/yd','Ladies']];
-  const csv='\uFEFF'+[headers.join(','),...sample.map(r=>r.map(x=>`"${x}"`).join(','))].join('\n');
-  const blob=new Blob([csv],{type:'text/csv'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='fabric_import_sample.csv'; a.click();
-  showToast('Sample CSV downloaded');
-}
-
-async function importCatalogCSV(file){
-  return new Promise((res,rej)=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      try{
-        const lines=e.target.result.replace(/\r/g,'').split('\n').filter(l=>l.trim());
-        if(lines.length<2) throw new Error('Empty CSV');
-        const headers=parseCSVRow(lines[0]).map(h=>h.toUpperCase().replace(/[^A-Z]/g,''));
-        const hIdx={};
-        ['SN','NAME','GSM','WIDTH','COMPOSITION','HF','RATE','CATEGORY'].forEach(k=>{ const idx=headers.indexOf(k); if(idx>=0) hIdx[k]=idx; });
-        if(hIdx['SN']===undefined||hIdx['NAME']===undefined) throw new Error('CSV must have SN and NAME columns');
-        const get=(row,k)=>row[hIdx[k]]||'';
-        let added=0, skipped=0;
-        for(let i=1;i<lines.length;i++){
-          const row=parseCSVRow(lines[i]);
-          if(row.length<2) continue;
-          const sn=get(row,'SN'), name=get(row,'NAME');
-          if(!name) continue;
-          if(DB.fabrics.some(f=>f.name.toLowerCase()===name.toLowerCase()||(sn&&f.sn===sn))){ skipped++; continue; }
-          DB.fabrics.push({id:uid(),sn:sn||String(DB.fabrics.length+added+1),name,
-            cat:get(row,'CATEGORY'),gsm:get(row,'GSM'),width:get(row,'WIDTH'),
-            comp:get(row,'COMPOSITION'),hf:get(row,'HF'),rate:get(row,'RATE')});
-          added++;
-        }
-        saveToLocal(); addLog('IMPORT_CATALOG', `Added ${added}, skipped ${skipped}`);
-        res({added,skipped});
-      } catch(err){ rej(err); }
-    };
-    reader.onerror=rej;
-    reader.readAsText(file,'UTF-8');
-  });
-}
-
-async function handleCatalogImport(e){
-  const file=e.target.files[0]; if(!file) return;
-  try{
-    const r=await importCatalogCSV(file);
-    showToast(`Imported ${r.added} fabrics${r.skipped?`, ${r.skipped} duplicates skipped`:''}`);
-    addLog('IMPORT_CSV_OK', `File: ${file.name}`);
-    renderApp();
-  }catch(err){
-    showToast('Import error: '+err.message,'err');
-    addLog('IMPORT_CSV_ERR', err.message);
-  }
-  e.target.value='';
-}
-
-function exportFabricsCSV(){
-  const rows=DB.fabrics.map(f=>[f.sn,f.name,f.gsm,f.width,f.comp,f.hf,f.rate].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
-  const csv='\uFEFF'+['SN,NAME,GSM,WIDTH,COMPOSITION,HF,RATE',...rows].join('\n');
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`fabrics_${Date.now()}.csv`; a.click();
-  showToast(`Exported ${DB.fabrics.length} fabrics`);
-}
-
-function exportLogsCSV(){
-  const rows=DB.logs.map(l=>[l.time,l.userName,l.action,l.details].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
-  const csv='\uFEFF'+['Time,User,Action,Details',...rows].join('\n');
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`logs_${Date.now()}.csv`; a.click();
-  showToast(`Exported ${DB.logs.length} log entries`);
-}
-
-function clearLogs(){
-  if(!isAdmin()) return;
-  confirmModal('Clear All Logs','Permanently delete all logs?','danger',()=>{
-    DB.logs=[]; saveToLocal();
-    showToast('Logs cleared');
-    renderApp();
-  });
-}
-
-function renderLogTable(){
-  const wrap=document.getElementById('log-table-wrap'); if(!wrap) return;
-  const term=(document.getElementById('log-filter')?.value||'').toLowerCase();
-  const logs=term?DB.logs.filter(l=>(l.action+l.details+l.userName).toLowerCase().includes(term)):DB.logs;
-  if(!logs.length){ wrap.innerHTML='<div style="text-align:center;padding:32px">No logs found</div>'; return; }
-  wrap.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
-    <tbody>${logs.slice(0,200).map(l=>`<tr><td style="white-space:nowrap">${esc(l.time)}</td><td>${esc(l.userName)}</td><td><span class="log-tag">${esc(l.action)}</span></td><td>${esc(l.details)}</td></tr>`).join('')}</tbody></table></div>`;
-}
-
-// ========== GITHUB STOCK SYNC ==========
+// ========== GITHUB STOCK SYNC (Auto-sync every 2 minutes) ==========
 async function saveAndFetchGitHub(){
   const url = document.getElementById('gh-url-inp')?.value.trim();
   if(!url){ showToast('Enter GitHub raw JSON URL','err'); return; }
@@ -552,10 +635,6 @@ function downloadSampleStockJSON(){
   showToast('Downloaded sample stock.json');
 }
 
-// ========== AUTO SYNC ==========
-let _autoSyncTimer = null;
-const AUTO_SYNC_INTERVAL = 2 * 60 * 1000;
-
 function showSyncBadge(state){
   let el = document.getElementById('sync-badge');
   if(!el){
@@ -612,6 +691,21 @@ function startAutoSync(){
   _autoSyncTimer = setInterval(()=>autoSyncStock(false), AUTO_SYNC_INTERVAL);
 }
 
+// ========== GIST SETTINGS ==========
+async function saveGistConfig(){
+  const tok = document.getElementById('gist-tok-inp')?.value.trim();
+  if(!tok){ showToast('Enter GitHub token','err'); return; }
+  GIST_TOKEN = tok;
+  localStorage.setItem(SK.GL, tok);
+  try{
+    await saveToGist();
+    showToast('Gist configured! Database will sync across devices');
+    addLog('GIST_CONFIG','GitHub Gist connected');
+  }catch(e){
+    showToast('Gist error: '+e.message,'err');
+  }
+}
+
 // ========== FABRIC CRUD ==========
 function getStockFor(name){
   if(!name) return null;
@@ -647,6 +741,7 @@ function deleteFabric(id){
   const f=DB.fabrics.find(f=>f.id===id);
   if(f && confirm(`Delete "${f.name}"?`)){
     DB.fabrics=DB.fabrics.filter(f=>f.id!==id);
+    delete IMGS[id];
     saveToLocal(); addLog('DELETE_FABRIC',f.name);
     showToast(`Deleted ${f.name}`,'err');
     renderApp();
@@ -657,6 +752,8 @@ function editFabricModal(id){
   const f=DB.fabrics.find(f=>f.id===id);
   if(!f||!canEdit()) return;
   const stockQty = getStockFor(f.name)?.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0) || 0;
+  const imgs=getImages(id);
+  const irows=imgs.map((u,i)=>`<div class="img-url-row"><input value="${esc(u)}" placeholder="https://..."><button class="btn btn-sm btn-red" onclick="this.parentElement.remove()">Remove</button></div>`).join('');
   openModal(`<div class="modal-box"><div class="modal-title">Edit ${esc(f.name)}</div>
     <div class="modal-fld"><label>SN</label><input id="ed-sn" value="${esc(f.sn)}"></div>
     <div class="modal-fld"><label>Name</label><input id="ed-name" value="${esc(f.name)}"></div>
@@ -667,6 +764,7 @@ function editFabricModal(id){
     <div class="modal-fld"><label>HF</label><input id="ed-hf" value="${esc(f.hf||'')}"></div>
     <div class="modal-fld"><label>Rate</label><input id="ed-rate" value="${esc(f.rate||'')}"></div>
     <div class="modal-fld"><label>Stock Qty</label><input type="number" id="ed-stock" value="${stockQty}"></div>
+    <div style="margin-top:16px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Image URLs</span><button class="btn btn-sm btn-sky" onclick="addImageRow()">+ Add URL</button></div><div id="img-url-list">${irows}</div></div>
     <div class="modal-foot"><button class="btn btn-gold" onclick="saveEditFabric('${id}')">Save</button>
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
 }
@@ -682,6 +780,9 @@ function saveEditFabric(id){
       gsm:document.getElementById('ed-gsm')?.value, width:document.getElementById('ed-width')?.value,
       comp:document.getElementById('ed-comp')?.value, hf:document.getElementById('ed-hf')?.value,
       rate:document.getElementById('ed-rate')?.value};
+    const l=document.getElementById('img-url-list');
+    const urls=[]; if(l) l.querySelectorAll('input').forEach(inp=>{const v=san(inp.value,500);if(v&&v.startsWith('http'))urls.push(v);});
+    saveImages(id,urls);
     saveToLocal(); addLog('EDIT_FABRIC',`${sn} - ${name}`); showToast('Fabric updated');
     if(stockQty !== undefined) updateStockQuantity(name, stockQty);
     renderApp();
@@ -701,16 +802,23 @@ function showAddFabricModal(){
     <div class="modal-fld"><label>Composition</label><input id="add-comp" placeholder="Composition"></div>
     <div class="modal-fld"><label>HF</label><input id="add-hf" placeholder="HF/Finish"></div>
     <div class="modal-fld"><label>Rate</label><input id="add-rate" placeholder="Rate"></div>
+    <div style="margin-top:14px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Image URLs</span><button class="btn btn-sm btn-sky" onclick="addImageRow()">+ Add URL</button></div><div id="img-url-list"></div></div>
     <div class="modal-foot"><button class="btn btn-gold" onclick="submitAddFabric()">Create</button>
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
 }
 
 function submitAddFabric(){
-  addFabric({sn:document.getElementById('add-sn')?.value.trim(), name:document.getElementById('add-name')?.value.trim(),
+  const ok=addFabric({sn:document.getElementById('add-sn')?.value.trim(), name:document.getElementById('add-name')?.value.trim(),
     cat:document.getElementById('add-cat')?.value, gsm:document.getElementById('add-gsm')?.value,
     width:document.getElementById('add-width')?.value, comp:document.getElementById('add-comp')?.value,
     hf:document.getElementById('add-hf')?.value, rate:document.getElementById('add-rate')?.value});
-  closeModal();
+  if(ok){
+    const _nf=DB.fabrics[DB.fabrics.length-1];
+    const l=document.getElementById('img-url-list');
+    const urls=[]; if(l) l.querySelectorAll('input').forEach(i=>{const v=(i.value||'').trim();if(v.startsWith('http'))urls.push(v);});
+    if(urls.length) saveImages(_nf.id,urls);
+    closeModal(); renderApp();
+  }
 }
 
 function viewStockModal(name){
@@ -732,6 +840,7 @@ function viewFabric(id){
   if(!f) return;
   const stock=getStockFor(f.name);
   const stockQty=stock?.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0)||0;
+  const imgs=getImages(id);
   const adminView=isAdminOrSubAdmin();
   openModal(`<div class="modal-box"><div class="modal-title">${esc(f.name)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
@@ -744,6 +853,7 @@ function viewFabric(id){
       ${adminView?`<div><label>HF</label><div>${esc(f.hf||'—')}</div></div>
       <div><label>Stock</label><div><input type="number" id="modalStockQty" value="${stockQty}" style="width:80px;padding:5px"><button class="btn btn-sm btn-gold" style="margin-left:8px" onclick="updateStockQuantity('${f.name}', document.getElementById('modalStockQty').value); closeModal();">Update</button></div></div>`:''}
     </div>
+    ${imgs.length?`<div class="img-gallery">${imgs.map(u=>`<img src="${esc(u)}" class="img-thumb" onclick="window.open('${esc(u)}','_blank')" onerror="this.style.opacity='.3'">`).join('')}</div>`:''}
     ${stock?.length?`<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;margin-top:12px">
       <div style="font-size:.65rem;font-weight:700;color:var(--t3);margin-bottom:9px">Stock — ${esc(f.name)}</div>
       <table style="width:100%"><thead><tr><th>Design</th><th>Qty</th><th>Unit</th><th>Comment</th></tr></thead>
@@ -774,12 +884,6 @@ function shareStockWA(name){
   window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
   addLog('WA_SHARE_STOCK',name);
 }
-
-// ========== USER MANAGEMENT ==========
-function approveUser(id){ const u=DB.users.find(u=>u.id===id); if(u){u.status='approved';saveToLocal();addLog('APPROVE',u.fullName);showToast(`Approved ${u.fullName}`);renderApp();} }
-function rejectUser(id){ const u=DB.users.find(u=>u.id===id); DB.users=DB.users.filter(u=>u.id!==id); saveToLocal(); addLog('REJECT',u?.fullName||id); showToast('User rejected','err'); renderApp(); }
-function deactivateUser(id){ const u=DB.users.find(u=>u.id===id); if(u&&u.role!=='admin'){u.status='inactive';saveToLocal();addLog('DEACTIVATE',u.fullName);showToast(`${u.fullName} deactivated`);renderApp();} }
-function activateUser(id){ const u=DB.users.find(u=>u.id===id); if(u){u.status='approved';saveToLocal();addLog('ACTIVATE',u.fullName);showToast(`${u.fullName} activated`);renderApp();} }
 
 // ========== SETTINGS ==========
 function saveCompany(){
@@ -872,7 +976,7 @@ function pageCatalog(){
     <button class="btn btn-sky btn-sm" onclick="downloadSampleCSV()">📥 Sample CSV</button>
     <button class="btn btn-ghost btn-sm" onclick="showManageCategories()">🏷 Categories</button>`:''}</div></div>
     <div class="search-wrap"><span class="search-ico">⌕</span><input id="cat-search" placeholder="Search fabric..." oninput="renderApp()"><button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('cat-search').value='';renderApp()">Reset</button></div>
-    <div class="tbl-wrap"><table><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th></tr></thead>
+    <div class="tbl-wrap"><table><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th><tr></thead>
     <tbody>${filtered.map(f=>`<tr><td style="color:var(--t3)">${esc(f.sn)}</td>
       <td><strong style="color:var(--gold);cursor:pointer" onclick="viewFabric('${f.id}')">${esc(f.name)}</strong></td>
       <td>${esc(f.gsm||'—')}</td><td>${esc(f.width||'—')}</td><td class="gold">${esc(f.rate||'—')}</td>
@@ -880,7 +984,8 @@ function pageCatalog(){
       :`<span class="badge b-broker">${getStockFor(f.name)?.length||0} shade${getStockFor(f.name)?.length!==1?'s':''}</span>`}</td>
       <td class="btn-row">${admin?`<button class="btn btn-sm btn-ghost" onclick="editFabricModal('${f.id}')">Edit</button>
       <button class="btn btn-sm btn-red" onclick="deleteFabric('${f.id}')">Del</button>`:''}
-      <button class="btn btn-sm btn-green" onclick="shareFabricWA('${f.id}')">Share</button></td></tr>`).join('') || '<tr class="empty-row"><td colspan="7">No fabrics</td></tr>'}</tbody></table></div></div>`;
+      <button class="btn btn-sm btn-green" onclick="shareFabricWA('${f.id}')">Share</button></td>
+    </tr>`).join('') || '<tr class="empty-row"><td colspan="7">No fabrics</td>'}</tbody></table></div></div>`;
 }
 
 function pageStock(){
@@ -934,7 +1039,7 @@ function pageStock(){
     </select>
     <button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('stk-search').value='';document.getElementById('stk-cat-filter').value='';renderApp()">Reset</button></div>
     <div class="tbl-wrap"><table><thead><tr><th>Fabric Name</th><th>Category</th><th>Variants</th>${adminView?'<th>Total Qty</th><th>Unit</th>':''}<th>Actions</th></tr></thead>
-    <tbody>${tableBody || '<tr class="empty-row"><td colspan="6">No stock data. Sync from GitHub first.<tr>'}</tbody></table></div></div>`;
+    <tbody>${tableBody || '<tr class="empty-row"><td colspan="6">No stock data. Sync from GitHub first.</td>'}</tbody></table></div></div>`;
 }
 
 function clearStock(){
@@ -947,8 +1052,10 @@ function pageUsers(){
   const pending=DB.users.filter(u=>u.status==='pending');
   const active=DB.users.filter(u=>u.status==='approved'&&u.role!=='admin');
   const inactive=DB.users.filter(u=>u.status==='inactive');
-  const rowHtml = u => `<tr><td><strong>${esc(u.fullName)}</strong><br><span style="font-size:.7rem">${esc(u.email||'—')}</span></td>
-    <td>${esc(u.mobile)}</td><td><span class="badge b-${u.role}">${u.role}</span></td>
+  const rowHtml = u => `<tr>
+    <td><strong>${esc(u.fullName)}</strong><br><span style="font-size:.7rem">${esc(u.email||'—')}</span></td>
+    <td>${esc(u.mobile)}</td>
+    <td><span class="badge b-${u.role}">${u.role}</span></td>
     <td><span class="sdot ${u.status==='approved'?'d-green':u.status==='pending'?'d-orange':'d-red'}"></span>${u.status}</td>
     <td class="btn-row">${u.status==='pending'?`<button class="btn btn-sm btn-green" onclick="approveUser('${u.id}')">Approve</button><button class="btn btn-sm btn-red" onclick="rejectUser('${u.id}')">Reject</button>`:''}
     ${u.status==='approved' && u.role!=='admin'?`<button class="btn btn-sm btn-red" onclick="deactivateUser('${u.id}')">Deactivate</button>`:''}
@@ -957,18 +1064,18 @@ function pageUsers(){
   return `<div class="page-head"><div class="page-title">User Management</div><div class="page-sub">${DB.users.length} total users</div></div>
   <div class="card"><div class="card-head"><span class="card-title">⏳ Pending Approvals (${pending.length})</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody>${pending.map(rowHtml).join('')||'<tr><td colspan="5">No pending approvals</td></tr>'}</tbody></table></div></div>
+    <tbody>${pending.map(rowHtml).join('')||'<tr><td colspan="5">No pending approvals</td>'}</tbody></table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">✓ Active Users</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody>${active.map(rowHtml).join('')||'<tr><td colspan="5">No active users</td></tr>'}</tbody></table></div></div>
+    <tbody>${active.map(rowHtml).join('')||'<tr><td colspan="5">No active users</td>'}</tbody></table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">✗ Inactive Users</span></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody>${inactive.map(rowHtml).join('')||'<tr><td colspan="5">No inactive users</td></tr>'}</tbody></table></div></div>`;
+    <div class="tbl-wrap"></td><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>${inactive.map(rowHtml).join('')||'<tr><td colspan="5">No inactive users</td>'}</tbody></table></div></div>`;
 }
 
 function pageGitHubStock(){
   const lastSync = localStorage.getItem('ff_last_sync')||'Not yet';
-  return `<div class="page-head"><div class="page-title">🐙 GitHub Stock Sync</div><div class="page-sub">Auto-fetch stock from your GitHub Gist JSON file</div></div>
+  return `<div class="page-head"><div class="page-title">🐙 GitHub Stock Sync</div><div class="page-sub">Auto-fetch stock from your GitHub Gist JSON file · Auto-sync every 2 minutes</div></div>
   <div class="card"><div class="card-head"><span class="card-title">GitHub Raw JSON URL</span></div>
     <div class="info-box">Your JSON format: <code>{"Item Name":"BARBIE","Design / Color No":"1","Quantity":230,"Unit":"Rolls"}</code><br>
     <strong>Your Gist URL:</strong> <code>https://gist.githubusercontent.com/viphologram/12f3b69117bcdfdfd90214dec81293c4/raw/stock.json</code></div>
@@ -989,6 +1096,11 @@ function pageGitHubStock(){
   {"Item Name": "KOREAN", "Design / Color No": "1", "Quantity": 284, "Unit": "Rolls"}
 ]</pre>
     <div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="downloadSampleStockJSON()">⬇ Download Sample stock.json</button></div>
+  </div>
+  <div class="card"><div class="card-head"><span class="card-title">🔗 Shared Database (GitHub Gist)</span></div>
+    <div class="info-box">To share user data across devices, configure GitHub Gist (gist scope token).</div>
+    <div style="display:flex;gap:8px;margin-bottom:8px"><input type="password" id="gist-tok-inp" placeholder="GitHub token (gist scope)" class="set-inp"><button class="btn btn-gold" onclick="saveGistConfig()">Save Gist</button></div>
+    <div style="font-size:.7rem;color:var(--t3)">Token saved locally. All devices with same token will share database.</div>
   </div>`;
 }
 
@@ -1115,6 +1227,8 @@ window.exportLogsCSV = exportLogsCSV;
 window.clearLogs = clearLogs;
 window.renderLogTable = renderLogTable;
 window.showResetModal = showResetModal;
+window.addImageRow = addImageRow;
+window.saveGistConfig = saveGistConfig;
 
 initDB();
 </script>
