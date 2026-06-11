@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FabricFlow Pro | Fabric Management ERP</title>
+<title>FabricFlow Pro | Complete Fabric Management ERP</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <style>
@@ -26,8 +26,11 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
 
 .auth-bg{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);position:relative}
+.auth-bg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(232,160,32,.07) 0%,transparent 70%)}
 .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:28px;padding:44px 40px;width:100%;max-width:420px;box-shadow:var(--shadow)}
 .auth-brand{font-family:'Fraunces',serif;font-size:2rem;color:var(--gold);text-align:center}
 .auth-tagline{text-align:center;color:var(--t3);font-size:.75rem;margin-bottom:28px}
@@ -39,6 +42,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .fld input,.fld select{width:100%;padding:10px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);outline:none}
 .auth-btn{width:100%;padding:11px;background:var(--gold);border:none;border-radius:30px;font-weight:700;color:#000;cursor:pointer;margin-top:8px}
 .err-msg{font-size:.73rem;color:var(--red);margin-top:6px;display:none;padding:7px 12px;background:rgba(240,77,77,.09);border-radius:8px}
+.err-msg.on{display:block}
 
 .sidebar{width:256px;background:var(--surface);border-right:1px solid var(--border);position:fixed;height:100vh;z-index:200;overflow-y:auto;transition:transform .25s}
 .sb-head{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
@@ -52,7 +56,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .nav-icon{font-size:1rem;width:20px;text-align:center}
 .nav-badge{background:var(--red);color:#fff;font-size:.62rem;border-radius:20px;padding:1px 6px;margin-left:auto}
 .sb-foot{padding:16px;border-top:1px solid var(--border)}
-.theme-pill{background:var(--s2);border:1px solid var(--border);width:100%;padding:7px;border-radius:30px;margin-bottom:12px;cursor:pointer;font-weight:600;color:var(--t2);text-align:center}
+.theme-pill{background:var(--s2);border:1px solid var(--border);width:100%;padding:7px;border-radius:30px;margin-bottom:12px;cursor:pointer;text-align:center}
 .user-row{display:flex;align-items:center;gap:9px}
 .uavatar{width:34px;height:34px;background:linear-gradient(135deg,var(--gold),#c47a00);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#000}
 .uname{font-size:.78rem;font-weight:600;color:var(--text)}
@@ -80,7 +84,7 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .btn-sky{background:rgba(34,196,232,.1);color:var(--sky);border:1px solid rgba(34,196,232,.22)}
 .btn-sm{padding:4px 10px;font-size:.7rem}
 .btn-row{display:flex;flex-wrap:wrap;gap:5px}
-.search-wrap{position:relative;margin-bottom:16px}
+.search-wrap{position:relative;margin-bottom:16px;display:flex;gap:10px}
 .search-wrap input{width:100%;padding:10px 14px 10px 38px;background:var(--bg);border:1.5px solid var(--border);border-radius:30px;color:var(--text);outline:none}
 .search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--t3)}
 .tbl-wrap{overflow-x:auto}
@@ -89,6 +93,11 @@ th{text-align:left;padding:12px 10px;font-size:.7rem;text-transform:uppercase;co
 td{padding:12px 10px;border-bottom:1px solid var(--border);color:var(--t2);font-size:.82rem}
 tr:hover td{background:var(--s2)}
 .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.67rem;font-weight:700}
+.b-admin{background:rgba(240,77,77,.1);color:var(--red)}
+.b-subadmin{background:rgba(155,109,255,.1);color:var(--purple)}
+.b-broker{background:rgba(75,140,247,.1);color:var(--blue)}
+.b-pending{background:rgba(232,160,32,.1);color:var(--gold)}
+.b-approved{background:rgba(39,201,138,.1);color:var(--green)}
 .sdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
 .d-green{background:#16a34a}.d-orange{background:#ea580c}.d-red{background:#dc2626}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -106,6 +115,15 @@ tr:hover td{background:var(--s2)}
 .toast-err{background:rgba(240,77,77,.12);border-color:rgba(240,77,77,.3);color:var(--red)}
 .stock-input{width:80px;padding:5px 8px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;color:var(--text);text-align:center}
 .url-text{font-family:monospace;font-size:13px;word-break:break-all;background:var(--surface);padding:10px;border-radius:6px;margin:10px 0;border:1px solid var(--border)}
+.img-url-row{display:flex;gap:6px;align-items:center;margin-bottom:7px}
+.img-url-row input{flex:1;padding:8px 11px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;color:var(--text);outline:none}
+.drop-zone{border:2px dashed var(--border2);border-radius:16px;padding:32px 20px;text-align:center;cursor:pointer;background:var(--s2)}
+.drop-icon{font-size:2.5rem;margin-bottom:8px}
+.log-row{display:grid;grid-template-columns:148px 120px 125px 1fr;gap:9px;padding:8px 9px;border-bottom:1px solid var(--border);font-size:.77rem}
+.log-head{font-size:.62rem;font-weight:700;text-transform:uppercase;color:var(--t3);padding:6px 9px;border-bottom:2px solid var(--border);display:grid;grid-template-columns:148px 120px 125px 1fr;gap:9px}
+.log-tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:.65rem;font-weight:700;background:rgba(75,140,247,.1);color:var(--blue)}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.set-inp{width:100%;padding:10px 13px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);outline:none;margin-bottom:10px}
 .hamburger{display:none;position:fixed;top:13px;left:13px;z-index:300;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:7px 10px;cursor:pointer}
 .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:199}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
@@ -115,6 +133,7 @@ tr:hover td{background:var(--s2)}
   .sb-overlay.open{display:block}
   .main{margin-left:0;padding:60px 14px 18px}
   .hamburger{display:flex}
+  .settings-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -144,7 +163,7 @@ const isAdminLike = () => ['admin','subadmin'].includes(CU?.role);
 const canEdit = () => CU?.role === 'admin';
 const isAdminOrSubAdmin = () => ['admin','subadmin'].includes(CU?.role);
 
-const SK = {U:'ff_u',F:'ff_f',L:'ff_l',CO:'ff_co',TH:'ff_th',ST:'ff_st',IM:'ff_im',AB:'ff_ab',GH:'ff_gh_url',GS2:'ff_gh_sha'};
+const SK = {U:'ff_u',F:'ff_f',L:'ff_l',CO:'ff_co',TH:'ff_th',ST:'ff_st',IM:'ff_im',AB:'ff_ab',GH:'ff_gh_url',GS2:'ff_gh_sha',CATS:'ff_cats'};
 let DB={users:[],fabrics:[],logs:[],company:'FabricFlow'};
 let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='';
 
@@ -231,7 +250,7 @@ function switchAuthTab(t){
   document.querySelectorAll('.tab-btn').forEach(el=>el.classList.toggle('on',el.dataset.tab===t));
 }
 
-// ========== STOCK PARSING - Supports Your JSON Format ==========
+// ========== STOCK PARSING ==========
 function parseStockJSON(json){
   if(!Array.isArray(json)) throw new Error('Expected JSON array');
   const stock={};
@@ -251,6 +270,178 @@ function parseStockJSON(json){
   return stock;
 }
 
+// ========== CATEGORY MANAGEMENT ==========
+function getCategoryList(){
+  const used=[...new Set(DB.fabrics.map(f=>f.cat||'').filter(Boolean))];
+  const adminCats=JSON.parse(localStorage.getItem(SK.CATS)||'[]');
+  const all=[...new Set([...adminCats,...used])].sort();
+  return all.length ? all : ['Suiting','Shirting','Ladies','Children'];
+}
+
+function saveCategoryList(cats){
+  localStorage.setItem(SK.CATS,JSON.stringify(cats.filter(Boolean)));
+}
+
+function showManageCategories(){
+  if(!canEdit()) return;
+  const cats=getCategoryList();
+  const rows=cats.map((c,i)=>`<div class="img-url-row"><input value="${esc(c)}" placeholder="Category name" maxlength="50" style="flex:1"><button class="btn btn-sm btn-red" onclick="this.parentElement.remove()">Remove</button></div>`).join('');
+  openModal(`<div class="modal-box"><div class="modal-title">🏷 Manage Categories</div><div id="cat-list">${rows}</div><button class="btn btn-sky btn-sm" style="margin-top:10px" onclick="addCategoryRow()">+ Add Category</button>
+    <div class="modal-foot"><button class="btn btn-gold" onclick="saveCategories()">Save</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
+}
+
+function addCategoryRow(){
+  const l=document.getElementById('cat-list');
+  if(l){ const d=document.createElement('div'); d.className='img-url-row'; d.innerHTML='<input placeholder="New category" maxlength="50" style="flex:1"><button class="btn btn-sm btn-red" onclick="this.parentElement.remove()">Remove</button>'; l.appendChild(d); }
+}
+
+function saveCategories(){
+  const l=document.getElementById('cat-list');
+  const cats=[]; if(l) l.querySelectorAll('input').forEach(i=>{const v=(i.value||'').trim();if(v)cats.push(v);});
+  saveCategoryList(cats);
+  addLog('CATEGORIES','Updated: '+cats.join(', '));
+  showToast('Categories saved: '+cats.length+' categories');
+  closeModal(); renderApp();
+}
+
+// ========== ASSIGN CATEGORY TO STOCK ==========
+function assignCategoryToStock(fabricName){
+  if(!isAdminOrSubAdmin()) return;
+  const fab=DB.fabrics.find(f=>f.name.toUpperCase()===fabricName.toUpperCase());
+  const curCat=fab?.cat||'';
+  const cats=getCategoryList();
+  const opts=cats.map(x=>`<option value="${esc(x)}" ${curCat===x?'selected':''}>${esc(x)}</option>`).join('');
+  openModal(`<div class="modal-box"><div class="modal-title">Assign Category</div>
+    <div style="color:var(--t2);margin-bottom:14px">Fabric: <strong>${esc(fabricName)}</strong></div>
+    <div class="modal-fld"><label>Category</label>
+      <select id="stk-cat-sel" style="width:100%;padding:10px">${opts}</select>
+      <input id="stk-cat-new" placeholder="Or type a new category..." maxlength="50" style="width:100%;margin-top:8px;padding:9px">
+    </div>
+    <div class="modal-foot"><button class="btn btn-gold" onclick="saveStockCategory('${fabricName.replace(/'/g,"\\'")}')">Save</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
+}
+
+function saveStockCategory(fabricName){
+  const sel=(document.getElementById('stk-cat-sel')?.value||'').trim();
+  const typed=(document.getElementById('stk-cat-new')?.value||'').trim();
+  const cat=typed||sel;
+  if(!cat){ showToast('Select or type a category','err'); return; }
+  let fab=DB.fabrics.find(f=>f.name.toUpperCase()===fabricName.toUpperCase());
+  if(fab){
+    const i=DB.fabrics.indexOf(fab);
+    DB.fabrics[i]={...fab,cat:san(cat,50)};
+  } else {
+    DB.fabrics.push({id:uid(),sn:String(DB.fabrics.length+1),name:fabricName.toUpperCase(),cat:san(cat,50),gsm:'',width:'',comp:'',hf:'',rate:''});
+  }
+  if(typed){
+    const existing=getCategoryList();
+    if(!existing.includes(typed)) saveCategoryList([...existing,typed]);
+  }
+  saveToLocal(); addLog('ASSIGN_CAT',`${fabricName} → ${cat}`);
+  showToast(`Category "${cat}" assigned to ${fabricName}`);
+  closeModal(); renderApp();
+}
+
+// ========== CSV IMPORT/EXPORT ==========
+function parseCSVRow(line){
+  const out=[]; let cur='', q=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'&&q&&line[i+1]==='"'){ cur+='"'; i++; }
+    else if(line[i]==='"'){ q=!q; }
+    else if(line[i]===','&&!q){ out.push(cur.trim()); cur=''; }
+    else cur+=line[i];
+  }
+  out.push(cur.trim()); return out;
+}
+
+function downloadSampleCSV(){
+  const headers=['SN','NAME','GSM','WIDTH','COMPOSITION','HF','RATE','CATEGORY'];
+  const sample=[['1001','BARBIE','180','58/60','100% Polyester','Soft','₹189/yd','Ladies']];
+  const csv='\uFEFF'+[headers.join(','),...sample.map(r=>r.map(x=>`"${x}"`).join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='fabric_import_sample.csv'; a.click();
+  showToast('Sample CSV downloaded');
+}
+
+async function importCatalogCSV(file){
+  return new Promise((res,rej)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const lines=e.target.result.replace(/\r/g,'').split('\n').filter(l=>l.trim());
+        if(lines.length<2) throw new Error('Empty CSV');
+        const headers=parseCSVRow(lines[0]).map(h=>h.toUpperCase().replace(/[^A-Z]/g,''));
+        const hIdx={};
+        ['SN','NAME','GSM','WIDTH','COMPOSITION','HF','RATE','CATEGORY'].forEach(k=>{ const idx=headers.indexOf(k); if(idx>=0) hIdx[k]=idx; });
+        if(hIdx['SN']===undefined||hIdx['NAME']===undefined) throw new Error('CSV must have SN and NAME columns');
+        const get=(row,k)=>row[hIdx[k]]||'';
+        let added=0, skipped=0;
+        for(let i=1;i<lines.length;i++){
+          const row=parseCSVRow(lines[i]);
+          if(row.length<2) continue;
+          const sn=get(row,'SN'), name=get(row,'NAME');
+          if(!name) continue;
+          if(DB.fabrics.some(f=>f.name.toLowerCase()===name.toLowerCase()||(sn&&f.sn===sn))){ skipped++; continue; }
+          DB.fabrics.push({id:uid(),sn:sn||String(DB.fabrics.length+added+1),name,
+            cat:get(row,'CATEGORY'),gsm:get(row,'GSM'),width:get(row,'WIDTH'),
+            comp:get(row,'COMPOSITION'),hf:get(row,'HF'),rate:get(row,'RATE')});
+          added++;
+        }
+        saveToLocal(); addLog('IMPORT_CATALOG', `Added ${added}, skipped ${skipped}`);
+        res({added,skipped});
+      } catch(err){ rej(err); }
+    };
+    reader.onerror=rej;
+    reader.readAsText(file,'UTF-8');
+  });
+}
+
+async function handleCatalogImport(e){
+  const file=e.target.files[0]; if(!file) return;
+  try{
+    const r=await importCatalogCSV(file);
+    showToast(`Imported ${r.added} fabrics${r.skipped?`, ${r.skipped} duplicates skipped`:''}`);
+    addLog('IMPORT_CSV_OK', `File: ${file.name}`);
+    renderApp();
+  }catch(err){
+    showToast('Import error: '+err.message,'err');
+    addLog('IMPORT_CSV_ERR', err.message);
+  }
+  e.target.value='';
+}
+
+function exportFabricsCSV(){
+  const rows=DB.fabrics.map(f=>[f.sn,f.name,f.gsm,f.width,f.comp,f.hf,f.rate].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const csv='\uFEFF'+['SN,NAME,GSM,WIDTH,COMPOSITION,HF,RATE',...rows].join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`fabrics_${Date.now()}.csv`; a.click();
+  showToast(`Exported ${DB.fabrics.length} fabrics`);
+}
+
+function exportLogsCSV(){
+  const rows=DB.logs.map(l=>[l.time,l.userName,l.action,l.details].map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(','));
+  const csv='\uFEFF'+['Time,User,Action,Details',...rows].join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`logs_${Date.now()}.csv`; a.click();
+  showToast(`Exported ${DB.logs.length} log entries`);
+}
+
+function clearLogs(){
+  if(!isAdmin()) return;
+  confirmModal('Clear All Logs','Permanently delete all logs?','danger',()=>{
+    DB.logs=[]; saveToLocal();
+    showToast('Logs cleared');
+    renderApp();
+  });
+}
+
+function renderLogTable(){
+  const wrap=document.getElementById('log-table-wrap'); if(!wrap) return;
+  const term=(document.getElementById('log-filter')?.value||'').toLowerCase();
+  const logs=term?DB.logs.filter(l=>(l.action+l.details+l.userName).toLowerCase().includes(term)):DB.logs;
+  if(!logs.length){ wrap.innerHTML='<div style="text-align:center;padding:32px">No logs found</div>'; return; }
+  wrap.innerHTML=`<div class="tbl-wrap"><tr><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+    <tbody>${logs.slice(0,200).map(l=>`<tr><td style="white-space:nowrap">${esc(l.time)}</td><td>${esc(l.userName)}</td><td><span class="log-tag">${esc(l.action)}</span></td><td>${esc(l.details)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
 // ========== GITHUB STOCK SYNC ==========
 async function saveAndFetchGitHub(){
   const url = document.getElementById('gh-url-inp')?.value.trim();
@@ -261,21 +452,18 @@ async function saveAndFetchGitHub(){
     const el = document.getElementById('gh-status');
     if(el){ el.textContent=msg; el.style.color=type==='err'?'var(--red)':type==='ok'?'var(--green)':'var(--t2)'; }
   };
-  setStatus('Connecting to GitHub...', 'info');
+  setStatus('Connecting to GitHub...');
   try{
     const fetchUrl = url.includes('?') ? url+'&_t='+Date.now() : url+'?_t='+Date.now();
     const r = await fetch(fetchUrl, {cache:'no-cache'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const text = await r.text();
     if(!text||text.trim().length<5) throw new Error('Empty response');
-    
     let json;
     try{ json=JSON.parse(text); }
     catch(pe){ throw new Error('Invalid JSON: '+pe.message); }
-    
     const newStock = parseStockJSON(json);
     if(!Object.keys(newStock).length) throw new Error('No fabric data found');
-    
     let hash=0;
     for(let i=0;i<Math.min(text.length,2000);i++) hash=((hash<<5)-hash)+text.charCodeAt(i)|0;
     GH_SHA = String(hash);
@@ -284,7 +472,7 @@ async function saveAndFetchGitHub(){
     saveToLocal();
     const now = new Date().toLocaleString();
     localStorage.setItem('ff_last_sync', now);
-    setStatus(`✓ Connected — ${Object.keys(STOCK).length} fabric types · ${Object.values(STOCK).reduce((a,b)=>a+b.length,0)} shades loaded · ${now}`, 'ok');
+    setStatus(`✓ Connected — ${Object.keys(STOCK).length} fabric types · ${Object.values(STOCK).reduce((a,b)=>a+b.length,0)} shades · ${now}`, 'ok');
     addLog('GH_CONNECT', `Loaded ${Object.keys(STOCK).length} fabric types`);
     showToast(`✓ Loaded ${Object.keys(STOCK).length} fabric types`);
     renderApp();
@@ -306,17 +494,13 @@ function clearGitHubUrl(){
 }
 
 function downloadSampleStockJSON(){
-  const sample=[
-    {"Item Name": "BARBIE", "Design / Color No": "1", "Quantity": 230, "Unit": "Rolls", "Comment": "K"},
-    {"Item Name": "BARBIE", "Design / Color No": "3", "Quantity": 29, "Unit": "Rolls", "Comment": ""},
-    {"Item Name": "KOREAN", "Design / Color No": "1", "Quantity": 284, "Unit": "Rolls", "Comment": ""}
-  ];
+  const sample=[{"Item Name":"BARBIE","Design / Color No":"1","Quantity":230,"Unit":"Rolls","Comment":"K"}];
   const blob=new Blob([JSON.stringify(sample,null,2)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='stock.json'; a.click();
   showToast('Downloaded sample stock.json');
 }
 
-// ========== AUTO SYNC (Every 2 minutes) ==========
+// ========== AUTO SYNC ==========
 let _autoSyncTimer = null;
 const AUTO_SYNC_INTERVAL = 2 * 60 * 1000;
 
@@ -327,24 +511,16 @@ function showSyncBadge(state){
     el.style.cssText='position:fixed;bottom:58px;right:18px;z-index:8888;font-size:.68rem;font-weight:700;padding:4px 11px;border-radius:20px;display:flex;align-items:center;gap:5px;transition:opacity .4s;pointer-events:none;box-shadow:0 2px 10px rgba(0,0,0,.3)';
     document.body.appendChild(el);
   }
-  if(state === 'syncing'){
-    el.style.background='rgba(75,140,247,.15)'; el.style.border='1px solid rgba(75,140,247,.3)'; el.style.color='var(--blue)'; el.style.opacity='1';
-    el.innerHTML='⟳ Syncing stock...';
-  } else if(state === 'ok'){
-    el.style.background='rgba(39,201,138,.12)'; el.style.border='1px solid rgba(39,201,138,.28)'; el.style.color='var(--green)'; el.style.opacity='1';
-    el.innerHTML='✓ Stock synced';
-    setTimeout(()=>{ if(el) el.style.opacity='0'; }, 4000);
-  } else if(state === 'nochange'){
-    el.style.background='rgba(39,201,138,.07)'; el.style.border='1px solid rgba(39,201,138,.15)'; el.style.color='var(--green)'; el.style.opacity='1';
-    el.innerHTML='✓ No changes';
-    setTimeout(()=>{ if(el) el.style.opacity='0'; }, 2500);
-  } else if(state === 'err'){
-    el.style.background='rgba(240,77,77,.1)'; el.style.border='1px solid rgba(240,77,77,.25)'; el.style.color='var(--red)'; el.style.opacity='1';
-    el.innerHTML='⚠ Sync failed';
-    setTimeout(()=>{ if(el) el.style.opacity='0'; }, 6000);
-  } else {
-    el.style.opacity='0';
-  }
+  const states = {
+    syncing:{ bg:'rgba(75,140,247,.15)', border:'1px solid rgba(75,140,247,.3)', color:'var(--blue)', icon:'⟳', hide:0 },
+    ok:{ bg:'rgba(39,201,138,.12)', border:'1px solid rgba(39,201,138,.28)', color:'var(--green)', icon:'✓', hide:4000 },
+    nochange:{ bg:'rgba(39,201,138,.07)', border:'1px solid rgba(39,201,138,.15)', color:'var(--green)', icon:'✓', hide:2500 },
+    err:{ bg:'rgba(240,77,77,.1)', border:'1px solid rgba(240,77,77,.25)', color:'var(--red)', icon:'⚠', hide:7000 }
+  };
+  const s = states[state] || states.ok;
+  el.style.background=s.bg; el.style.border=s.border; el.style.color=s.color; el.style.opacity='1';
+  el.innerHTML=s.icon+' '+(state==='syncing'?'Syncing...':state==='ok'?'Stock updated':state==='nochange'?'No changes':'Sync failed');
+  if(s.hide) setTimeout(()=>{ if(el) el.style.opacity='0'; }, s.hide);
 }
 
 async function autoSyncStock(isManual=false){
@@ -355,27 +531,19 @@ async function autoSyncStock(isManual=false){
     const r = await fetch(fetchUrl, {cache:'no-cache'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const text = await r.text();
-    if(!text||text.trim().length<5) throw new Error('Empty response');
-    
     let json;
     try{ json=JSON.parse(text); }
     catch(pe){ throw new Error('Invalid JSON'); }
-    
     const newStock = parseStockJSON(json);
-    if(!Object.keys(newStock).length) throw new Error('No data');
-    
     let hash=0;
     for(let i=0;i<Math.min(text.length,2000);i++) hash=((hash<<5)-hash)+text.charCodeAt(i)|0;
     const sha=String(hash);
-    
     if(!isManual && sha===GH_SHA){
       showSyncBadge('nochange');
       return;
     }
-    
     GH_SHA=sha; STOCK=newStock; saveToLocal();
-    const now = new Date().toLocaleString();
-    localStorage.setItem('ff_last_sync', now);
+    localStorage.setItem('ff_last_sync', new Date().toLocaleString());
     addLog('AUTO_SYNC', `Stock updated — ${Object.keys(STOCK).length} fabric types`);
     showSyncBadge('ok');
     renderApp();
@@ -471,10 +639,11 @@ function saveEditFabric(id){
 
 function showAddFabricModal(){
   if(!canEdit()) return;
+  const cats=getCategoryList();
   openModal(`<div class="modal-box"><div class="modal-title">Add Fabric</div>
     <div class="modal-fld"><label>SN *</label><input id="add-sn" placeholder="e.g. 101"></div>
     <div class="modal-fld"><label>Name *</label><input id="add-name" placeholder="Fabric name"></div>
-    <div class="modal-fld"><label>Category</label><input id="add-cat" placeholder="Category"></div>
+    <div class="modal-fld"><label>Category</label><input id="add-cat" list="cat-list"><datalist id="cat-list">${cats.map(x=>`<option>${esc(x)}</option>`).join('')}</datalist></div>
     <div class="modal-fld"><label>GSM</label><input id="add-gsm" placeholder="GSM"></div>
     <div class="modal-fld"><label>Width</label><input id="add-width" placeholder="Width"></div>
     <div class="modal-fld"><label>Composition</label><input id="add-comp" placeholder="Composition"></div>
@@ -514,12 +683,12 @@ function viewFabric(id){
   const adminView=isAdminOrSubAdmin();
   openModal(`<div class="modal-box"><div class="modal-title">${esc(f.name)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <div><label style="font-size:.63rem;font-weight:700;color:var(--t3)">SN</label><div>${esc(f.sn)}</div></div>
-      <div><label style="font-size:.63rem;font-weight:700;color:var(--t3)">Category</label><div class="sky">${esc(f.cat||'—')}</div></div>
-      <div><label style="font-size:.63rem;font-weight:700;color:var(--t3)">GSM</label><div>${esc(f.gsm||'—')}</div></div>
-      <div><label style="font-size:.63rem;font-weight:700;color:var(--t3)">Width</label><div>${esc(f.width||'—')}</div></div>
-      <div><label style="font-size:.63rem;font-weight:700;color:var(--t3)">Composition</label><div>${esc(f.comp||'—')}</div></div>
-      <div><label style="font-size:.63rem;font-weight:700;color:var(--t3)">Rate</label><div class="gold">${esc(f.rate||'—')}</div></div>
+      <div><label style="color:var(--t3);font-size:.63rem">SN</label><div>${esc(f.sn)}</div></div>
+      <div><label style="color:var(--t3);font-size:.63rem">Category</label><div class="sky">${esc(f.cat||'—')}</div></div>
+      <div><label style="color:var(--t3);font-size:.63rem">GSM</label><div>${esc(f.gsm||'—')}</div></div>
+      <div><label style="color:var(--t3);font-size:.63rem">Width</label><div>${esc(f.width||'—')}</div></div>
+      <div><label style="color:var(--t3);font-size:.63rem">Composition</label><div>${esc(f.comp||'—')}</div></div>
+      <div><label style="color:var(--t3);font-size:.63rem">Rate</label><div class="gold">${esc(f.rate||'—')}</div></div>
       ${adminView?`<div><label>HF</label><div>${esc(f.hf||'—')}</div></div>
       <div><label>Stock</label><div><input type="number" id="modalStockQty" value="${stockQty}" style="width:80px;padding:5px"><button class="btn btn-sm btn-gold" style="margin-left:8px" onclick="updateStockQuantity('${f.name}', document.getElementById('modalStockQty').value); closeModal();">Update</button></div></div>`:''}
     </div>
@@ -560,12 +729,52 @@ function rejectUser(id){ const u=DB.users.find(u=>u.id===id); DB.users=DB.users.
 function deactivateUser(id){ const u=DB.users.find(u=>u.id===id); if(u&&u.role!=='admin'){u.status='inactive';saveToLocal();addLog('DEACTIVATE',u.fullName);showToast(`${u.fullName} deactivated`);renderApp();} }
 function activateUser(id){ const u=DB.users.find(u=>u.id===id); if(u){u.status='approved';saveToLocal();addLog('ACTIVATE',u.fullName);showToast(`${u.fullName} activated`);renderApp();} }
 
+// ========== SETTINGS ==========
+function saveCompany(){
+  const v=san(document.getElementById('co-inp')?.value,80);
+  if(v){ DB.company=v; saveToLocal(); addLog('UPDATE_CO',v); showToast('Company updated'); renderApp(); }
+}
+
+async function changePassword(){
+  const op=document.getElementById('pwd-old')?.value, np=document.getElementById('pwd-new')?.value, cf=document.getElementById('pwd-cf')?.value;
+  const err=document.getElementById('pwd-err');
+  if(!op||!np){ err.textContent='Fill all fields'; err.classList.add('on'); return; }
+  if(np.length<6){ err.textContent='Minimum 6 characters'; err.classList.add('on'); return; }
+  if(np!==cf){ err.textContent='Passwords do not match'; err.classList.add('on'); return; }
+  const h=await hashPass(op,CU.salt);
+  if(h!==CU.password){ err.textContent='Wrong current password'; err.classList.add('on'); return; }
+  const salt=genSalt(), hash=await hashPass(np,salt);
+  CU.password=hash; CU.salt=salt;
+  const i=DB.users.findIndex(u=>u.id===CU.id); DB.users[i]=CU;
+  saveToLocal(); addLog('CHANGE_PWD','Password changed'); showToast('Password updated');
+  document.getElementById('pwd-old').value=''; document.getElementById('pwd-new').value=''; document.getElementById('pwd-cf').value='';
+  err.classList.remove('on');
+}
+
+function showResetModal(){
+  openModal(`<div class="modal-box"><div class="modal-title danger">Reset System</div>
+    <p>All data will be permanently deleted. Admin account will be recreated.</p>
+    <div class="modal-fld"><label>Confirm Admin Password</label><input type="password" id="rst-pw"></div>
+    <div class="modal-foot"><button class="btn btn-red" onclick="doReset()">Reset Everything</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
+}
+
+async function doReset(){
+  const pw=document.getElementById('rst-pw').value;
+  if(!pw){ showToast('Password required','err'); return; }
+  const h=await hashPass(pw,CU.salt);
+  if(h!==CU.password){ showToast('Wrong password','err'); return; }
+  closeModal(); localStorage.clear(); await initDB();
+  CU=DB.users.find(u=>u.role==='admin'); sessionStorage.setItem('ffs',JSON.stringify({id:CU.id}));
+  addLog('RESET','Full system reset'); PAGE='dashboard'; renderApp(); showToast('System reset complete');
+}
+
 // ========== MODAL ==========
 let _modalCB=null;
 function confirmModal(title,msg,type,cb){
   _modalCB=cb;
   openModal(`<div class="modal-box"><div class="modal-title ${type==='danger'?'danger':''}">${esc(title)}</div>
-    <p style="color:var(--t2);font-size:.83rem">${esc(msg)}</p>
+    <p style="color:var(--t2)">${esc(msg)}</p>
     <div class="modal-foot"><button class="btn ${type==='danger'?'btn-red':'btn-gold'}" onclick="_modalCB&&_modalCB();closeModal()">Confirm</button>
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
 }
@@ -589,7 +798,7 @@ function pageDashboard(){
     <div class="kpi"><div class="kpi-label">Pending Users</div><div class="kpi-val ${pending>0?'rd':'grn'}">${pending}</div></div>
     <div class="kpi"><div class="kpi-label">Total Users</div><div class="kpi-val prp">${DB.users.filter(u=>u.status==='approved'&&u.role!=='admin').length}</div></div>
   </div>
-  ${GH_URL ? `<div class="info-box">✓ GitHub Auto-Sync Active · Last sync: ${lastSync}</div>` : ''}
+  ${GH_URL ? `<div class="info-box">✓ GitHub Auto-Sync Active · Last sync: ${lastSync} · Auto-sync every 2 minutes</div>` : ''}
   <div class="card"><div class="card-head"><span class="card-title">Quick Actions</span></div>
     <div class="btn-row"><button class="btn btn-gold" onclick="goTo('github')">🐙 Sync from GitHub</button>
     <button class="btn btn-blue" onclick="goTo('catalog')">📋 Manage Fabrics</button>
@@ -600,41 +809,80 @@ function pageDashboard(){
 function pageCatalog(){
   const search = document.getElementById('cat-search')?.value?.toLowerCase() || '';
   const filtered = DB.fabrics.filter(f=>f.name.toLowerCase().includes(search) || f.sn.toLowerCase().includes(search));
-  const admin = CU?.role === 'admin';
+  const admin = canEdit();
   const adminView = isAdminOrSubAdmin();
-  return `<div class="page-head"><div class="page-title">Fabric Catalog</div><div class="page-sub">${DB.fabrics.length} fabrics</div></div>
+  const cats = getCategoryList();
+  return `<div class="page-head"><div class="page-title">Fabric Catalog</div><div class="page-sub">${DB.fabrics.length} fabrics · ${cats.length} categories</div></div>
   <div class="card"><div class="card-head"><span class="card-title">All Fabrics</span>
-    ${admin ? `<div class="btn-row"><button class="btn btn-gold btn-sm" onclick="showAddFabricModal()">+ Add Fabric</button></div>` : ''}</div>
-    <div class="search-wrap"><span class="search-ico">⌕</span><input id="cat-search" placeholder="Search..." oninput="renderApp()"></div>
+    <div class="btn-row">${admin?`<button class="btn btn-gold btn-sm" onclick="showAddFabricModal()">+ Add Fabric</button>
+    <label class="btn btn-blue btn-sm" style="cursor:pointer">Import CSV <input type="file" accept=".csv" style="display:none" onchange="handleCatalogImport(event)"></label>
+    <button class="btn btn-sky btn-sm" onclick="downloadSampleCSV()">📥 Sample CSV</button>
+    <button class="btn btn-ghost btn-sm" onclick="showManageCategories()">🏷 Categories</button>`:''}</div></div>
+    <div class="search-wrap"><span class="search-ico">⌕</span><input id="cat-search" placeholder="Search fabric..." oninput="renderApp()"><button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('cat-search').value='';renderApp()">Reset</button></div>
     <div class="tbl-wrap"><table><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th></tr></thead>
-    <tbody>${filtered.map(f=>`<tr><td>${esc(f.sn)}</td><td><strong style="color:var(--gold);cursor:pointer" onclick="viewFabric('${f.id}')">${esc(f.name)}</strong></td>
-    <td>${esc(f.gsm||'—')}</td><td>${esc(f.width||'—')}</td><td class="gold">${esc(f.rate||'—')}</td>
-    <td>${adminView?`<input type="number" class="stock-input" value="${getStockFor(f.name)?.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0)||0}" onchange="updateStockQuantity('${f.name}',this.value)">`
-    :`<span class="badge b-broker">${getStockFor(f.name)?.length||0} shade${getStockFor(f.name)?.length!==1?'s':''}</span>`}</td>
-    <td class="btn-row">${admin ? `<button class="btn btn-sm btn-ghost" onclick="editFabricModal('${f.id}')">Edit</button>
-    <button class="btn btn-sm btn-red" onclick="deleteFabric('${f.id}')">Del</button>` : ''}
-    <button class="btn btn-sm btn-green" onclick="shareFabricWA('${f.id}')">Share</button></td></tr>`).join('') || '<tr class="empty-row"><td colspan="7">No fabrics</td></tr>'}</tbody></table></div></div>`;
+    <tbody>${filtered.map(f=>`<tr><td style="color:var(--t3)">${esc(f.sn)}</td>
+      <td><strong style="color:var(--gold);cursor:pointer" onclick="viewFabric('${f.id}')">${esc(f.name)}</strong></td>
+      <td>${esc(f.gsm||'—')}</td><td>${esc(f.width||'—')}</td><td class="gold">${esc(f.rate||'—')}</td>
+      <td>${adminView?`<input type="number" class="stock-input" value="${getStockFor(f.name)?.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0)||0}" onchange="updateStockQuantity('${f.name}',this.value)">`
+      :`<span class="badge b-broker">${getStockFor(f.name)?.length||0} shade${getStockFor(f.name)?.length!==1?'s':''}</span>`}</td>
+      <td class="btn-row">${admin?`<button class="btn btn-sm btn-ghost" onclick="editFabricModal('${f.id}')">Edit</button>
+      <button class="btn btn-sm btn-red" onclick="deleteFabric('${f.id}')">Del</button>`:''}
+      <button class="btn btn-sm btn-green" onclick="shareFabricWA('${f.id}')">Share</button></td></tr>`).join('') || '<tr class="empty-row"><td colspan="7">No fabrics</td></tr>'}</tbody></table></div></div>`;
 }
 
 function pageStock(){
   const term = document.getElementById('stk-search')?.value?.toLowerCase() || '';
-  const filtered = Object.keys(STOCK).filter(k=>!term||k.toLowerCase().includes(term)).sort();
+  const catFilter = document.getElementById('stk-cat-filter')?.value || '';
+  const filtered = Object.keys(STOCK).filter(k=>{
+    const matchS = !term || k.toLowerCase().includes(term);
+    const fab = DB.fabrics.find(f=>f.name.toUpperCase()===k.toUpperCase());
+    const matchC = !catFilter || (fab?.cat||'').toLowerCase()===catFilter.toLowerCase();
+    return matchS && matchC;
+  }).sort();
   const adminView = isAdminOrSubAdmin();
+  const cats = getCategoryList();
+  
+  // Group by category
+  const stockGroups = {};
+  filtered.forEach(name=>{
+    const fab = DB.fabrics.find(f=>f.name.toUpperCase()===name.toUpperCase());
+    const grpKey = fab?.cat || 'Uncategorised';
+    if(!stockGroups[grpKey]) stockGroups[grpKey] = [];
+    stockGroups[grpKey].push(name);
+  });
+  
+  let tableBody = '';
+  Object.keys(stockGroups).sort((a,b)=>a==='Uncategorised'?1:b==='Uncategorised'?-1:a.localeCompare(b)).forEach(grp=>{
+    tableBody += `<tr><td colspan="${adminView?5:3}" style="background:var(--s2);padding:6px 14px;font-size:.63rem;font-weight:800;color:var(--sky);border-top:2px solid var(--border2)">${esc(grp)} (${stockGroups[grp].length})</td></tr>`;
+    stockGroups[grp].forEach(name=>{
+      const items=STOCK[name];
+      const total=items.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0);
+      const fab2 = DB.fabrics.find(f=>f.name.toUpperCase()===name.toUpperCase());
+      const catLabel = fab2?.cat || '';
+      tableBody += `<tr><td style="font-weight:600;color:var(--text)">${esc(name)}</td>
+        <td>${catLabel ? `<span class="badge b-subadmin">${esc(catLabel)}</span>` : 
+          (adminView ? `<button class="btn btn-sm btn-ghost" onclick="assignCategoryToStock('${name.replace(/'/g,"\\'")}')">+ Assign</button>` : '<span style="color:var(--t3)">—</span>')}</td>
+        <td style="color:var(--t2)">${items.length}</td>
+        ${adminView ? `<td class="gold">${total.toLocaleString('en-IN')}</td><td style="color:var(--t2)">${esc(items[0]?.unit||'Rolls')}</td>` : ''}
+        <td class="btn-row"><button class="btn btn-sm btn-ghost" onclick="viewStockModal('${name.replace(/'/g,"\\'")}')">View</button>
+        <button class="btn btn-sm btn-green" onclick="shareStockWA('${name.replace(/'/g,"\\'")}')">Share</button>
+        ${adminView && catLabel ? `<button class="btn btn-sm btn-sky" onclick="assignCategoryToStock('${name.replace(/'/g,"\\'")}')">✎ Cat</button>` : ''}</td>
+      </tr>`;
+    });
+  });
+  
   return `<div class="page-head"><div class="page-title">Stock Inventory</div><div class="page-sub">${Object.keys(STOCK).length} fabric types</div></div>
   <div class="card"><div class="card-head"><span class="card-title">Stock Source</span>
     <div class="btn-row"><button class="btn btn-gold btn-sm" onclick="goTo('github')">🐙 Sync from GitHub</button>
     ${adminView && Object.keys(STOCK).length>0 ? `<button class="btn btn-red btn-sm" onclick="clearStock()">🗑️ Clear Stock</button>` : ''}</div></div>
     <div class="info-box">Current source: ${GH_URL ? `<code>${esc(GH_URL.substring(0,60))}...</code>` : 'No GitHub URL configured'}</div>
-    <div class="search-wrap"><span class="search-ico">⌕</span><input id="stk-search" placeholder="Search fabric..." oninput="renderApp()"></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Fabric Name</th><th>Variants</th>${adminView?'<th>Total Qty</th><th>Unit</th>':''}<th>Actions</th></tr></thead>
-    <tbody>${filtered.map(name=>{
-      const items=STOCK[name];
-      const total=items.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0);
-      return `<tr><td><strong>${esc(name)}</strong></td><td>${items.length} ${items.length>1?'variants':'variant'}</td>
-      ${adminView?`<td class="gold">${total.toLocaleString('en-IN')}</td><td>${esc(items[0]?.unit||'Rolls')}</td>`:''}
-      <td class="btn-row"><button class="btn btn-sm btn-ghost" onclick="viewStockModal('${name}')">View Details</button>
-      <button class="btn btn-sm btn-green" onclick="shareStockWA('${name}')">Share</button></td></tr>`;
-    }).join('') || '<tr class="empty-row"><td colspan="4">No stock data. Sync from GitHub first.</td></tr>'}</tbody></table></div></div>`;
+    <div class="search-wrap"><span class="search-ico">⌕</span><input id="stk-search" placeholder="Search fabric..." oninput="renderApp()">
+    <select id="stk-cat-filter" onchange="renderApp()" style="padding:8px 12px;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;color:var(--text);margin-left:8px">
+      <option value="">All Categories</option>${cats.map(x=>`<option value="${esc(x)}" ${catFilter===x?'selected':''}>${esc(x)}</option>`).join('')}
+    </select>
+    <button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('stk-search').value='';document.getElementById('stk-cat-filter').value='';renderApp()">Reset</button></div>
+    <div class="tbl-wrap"></table><thead><tr><th>Fabric Name</th><th>Category</th><th>Variants</th>${adminView?'<th>Total Qty</th><th>Unit</th>':''}<th>Actions</th></tr></thead>
+    <tbody>${tableBody || '<tr class="empty-row"><td colspan="6">No stock data. Sync from GitHub first.</td>'}</tbody></table></div></div>`;
 }
 
 function clearStock(){
@@ -655,11 +903,11 @@ function pageUsers(){
     ${u.status==='inactive'?`<button class="btn btn-sm btn-green" onclick="activateUser('${u.id}')">Activate</button>`:''}</td></tr>`;
   return `<div class="page-head"><div class="page-title">User Management</div><div class="page-sub">${DB.users.length} total users</div></div>
   <div class="card"><div class="card-head"><span class="card-title">⏳ Pending Approvals (${pending.length})</span></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+    <div class="tbl-wrap"><tr><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
     <tbody>${pending.map(rowHtml).join('')||'<tr><td colspan="5">No pending approvals</td></tr>'}</tbody></table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">✓ Active Users</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody>${active.map(rowHtml).join('')||'<tr><td colspan="5">No active users</td></tr>'}</tbody></table></div></div>
+    <tbody>${active.map(rowHtml).join('')||'<tr><td colspan="5">No active users</td></tr>'}</tbody><table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">✗ Inactive Users</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
     <tbody>${inactive.map(rowHtml).join('')||'<tr><td colspan="5">No inactive users</td></tr>'}</tbody></table></div></div>`;
@@ -667,8 +915,7 @@ function pageUsers(){
 
 function pageGitHubStock(){
   const lastSync = localStorage.getItem('ff_last_sync')||'Not yet';
-  return `<div class="page-head"><div class="page-title">🐙 GitHub Stock Sync</div>
-    <div class="page-sub">Load stock from your GitHub Gist JSON file</div></div>
+  return `<div class="page-head"><div class="page-title">🐙 GitHub Stock Sync</div><div class="page-sub">Auto-fetch stock from your GitHub Gist JSON file</div></div>
   <div class="card"><div class="card-head"><span class="card-title">GitHub Raw JSON URL</span></div>
     <div class="info-box">Your JSON format: <code>{"Item Name":"BARBIE","Design / Color No":"1","Quantity":230,"Unit":"Rolls"}</code><br>
     <strong>Your Gist URL:</strong> <code>https://gist.githubusercontent.com/viphologram/12f3b69117bcdfdfd90214dec81293c4/raw/stock.json</code></div>
@@ -694,41 +941,25 @@ function pageGitHubStock(){
 
 function pageSettings(){
   return `<div class="page-head"><div class="page-title">Settings</div></div>
-  <div class="card"><div class="card-head"><span class="card-title">Theme</span></div>
-    <button class="btn btn-ghost" onclick="toggleTheme()">${isDark?'Switch to Light Mode':'Switch to Dark Mode'}</button>
-  </div>
-  <div class="card"><div class="card-head"><span class="card-title">Company Name</span></div>
-    <input id="co-inp" class="set-inp" value="${esc(DB.company)}" maxlength="80">
-    <button class="btn btn-gold" onclick="saveCompany()">Save</button>
-  </div>
-  <div class="card"><div class="card-head"><span class="card-title">Change Password</span></div>
-    <div class="modal-fld"><label>Current Password</label><input type="password" id="pwd-old" class="set-inp"></div>
-    <div class="modal-fld"><label>New Password (min 6)</label><input type="password" id="pwd-new" class="set-inp"></div>
-    <div class="modal-fld"><label>Confirm</label><input type="password" id="pwd-cf" class="set-inp"></div>
-    <button class="btn btn-gold" onclick="changePassword()">Update Password</button>
-    <div id="pwd-err" class="err-msg"></div>
-  </div>`;
-}
-
-function saveCompany(){
-  const v=san(document.getElementById('co-inp')?.value,80);
-  if(v){ DB.company=v; saveToLocal(); addLog('UPDATE_CO',v); showToast('Company updated'); renderApp(); }
-}
-
-async function changePassword(){
-  const op=document.getElementById('pwd-old')?.value, np=document.getElementById('pwd-new')?.value, cf=document.getElementById('pwd-cf')?.value;
-  const err=document.getElementById('pwd-err');
-  if(!op||!np){ err.textContent='Fill all fields'; err.classList.add('on'); return; }
-  if(np.length<6){ err.textContent='Minimum 6 characters'; err.classList.add('on'); return; }
-  if(np!==cf){ err.textContent='Passwords do not match'; err.classList.add('on'); return; }
-  const h=await hashPass(op,CU.salt);
-  if(h!==CU.password){ err.textContent='Wrong current password'; err.classList.add('on'); return; }
-  const salt=genSalt(), hash=await hashPass(np,salt);
-  CU.password=hash; CU.salt=salt;
-  const i=DB.users.findIndex(u=>u.id===CU.id); DB.users[i]=CU;
-  saveToLocal(); addLog('CHANGE_PWD','Password changed'); showToast('Password updated');
-  document.getElementById('pwd-old').value=''; document.getElementById('pwd-new').value=''; document.getElementById('pwd-cf').value='';
-  err.classList.remove('on');
+  <div class="settings-grid"><div>
+    <div class="card"><div class="card-head"><span class="card-title">Theme</span></div><button class="btn btn-ghost" onclick="toggleTheme()">${isDark?'Switch to Light Mode':'Switch to Dark Mode'}</button></div>
+    <div class="card"><div class="card-head"><span class="card-title">Company Name</span></div><input id="co-inp" class="set-inp" value="${esc(DB.company)}"><button class="btn btn-gold" onclick="saveCompany()">Save</button></div>
+    ${canEdit()?`<div class="card"><div class="card-head"><span class="card-title" style="color:var(--red)">Danger Zone</span></div><button class="btn btn-red" onclick="showResetModal()">Reset Entire System</button></div>`:''}
+  </div><div>
+    <div class="card"><div class="card-head"><span class="card-title">Change Password</span></div>
+      <div class="modal-fld"><label>Current</label><input type="password" id="pwd-old" class="set-inp"></div>
+      <div class="modal-fld"><label>New (min 6)</label><input type="password" id="pwd-new" class="set-inp"></div>
+      <div class="modal-fld"><label>Confirm</label><input type="password" id="pwd-cf" class="set-inp"></div>
+      <button class="btn btn-gold" onclick="changePassword()">Update</button><div id="pwd-err" class="err-msg"></div></div>
+    <div class="card"><div class="card-head"><span class="card-title">Export Data</span></div>
+      <div class="btn-row"><button class="btn btn-blue" onclick="exportFabricsCSV()">Export Fabrics</button>
+      <button class="btn btn-ghost" onclick="exportLogsCSV()">Export Logs</button></div></div>
+  </div></div>
+  <div class="card"><div class="card-head"><span class="card-title">📋 Activity & Error Logs</span>
+    <div class="btn-row"><input id="log-filter" placeholder="Filter..." style="padding:5px 10px;border-radius:20px;background:var(--bg);border:1px solid var(--border);color:var(--text)" oninput="renderLogTable()">
+    <button class="btn btn-sm btn-ghost" onclick="exportLogsCSV()">Export</button>
+    ${isAdmin()?`<button class="btn btn-sm btn-red" onclick="clearLogs()">Clear</button>`:''}</div></div>
+    <div id="log-table-wrap"></div></div>`;
 }
 
 // ========== RENDER APP ==========
@@ -787,6 +1018,7 @@ function renderApp(){
   else if(PAGE==='settings') mainHtml = pageSettings();
   
   root.innerHTML = sidebar + `<div class="main" id="main-content">${mainHtml}</div>`;
+  setTimeout(renderLogTable, 100);
   startAutoSync();
 }
 
@@ -823,6 +1055,15 @@ window.closeModal = closeModal;
 window.changePassword = changePassword;
 window.saveCompany = saveCompany;
 window.clearStock = clearStock;
+window.handleCatalogImport = handleCatalogImport;
+window.downloadSampleCSV = downloadSampleCSV;
+window.showManageCategories = showManageCategories;
+window.assignCategoryToStock = assignCategoryToStock;
+window.exportFabricsCSV = exportFabricsCSV;
+window.exportLogsCSV = exportLogsCSV;
+window.clearLogs = clearLogs;
+window.renderLogTable = renderLogTable;
+window.showResetModal = showResetModal;
 
 initDB().then(() => renderApp());
 </script>
