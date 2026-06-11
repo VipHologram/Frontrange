@@ -357,7 +357,7 @@ async function startGistSync(){
         const pending=DB.users.filter(u=>u.status==='pending').length;
         const badges=document.querySelectorAll('.nav-badge');
         badges.forEach(b=>{ if(b.closest('.nav-item[onclick*="users"]')) b.textContent=pending||''; });
-        if(CU?.role==='admin' && pending>0) renderPage();
+        if(CU?.role==='admin' && pending>0) renderApp();
       }
     }catch(e){}
   }, GIST_SYNC_MS);
@@ -375,7 +375,7 @@ function addLog(action,details){
 }
 
 function applyTheme(){ document.documentElement.setAttribute('data-theme', isDark?'dark':'light'); }
-function toggleTheme(){ isDark=!isDark; localStorage.setItem(SK.TH,isDark?'dark':'light'); applyTheme(); renderPage(); }
+function toggleTheme(){ isDark=!isDark; localStorage.setItem(SK.TH,isDark?'dark':'light'); applyTheme(); renderApp(); }
 
 async function doLogin(){
   const id=document.getElementById('l-id').value.trim(), pw=document.getElementById('l-pw').value;
@@ -503,7 +503,7 @@ async function uploadStockFile(file,silent=false){
     const r2=new FileReader(); r2.onload=ev=>localStorage.setItem(SK.AB,ev.target.result); r2.readAsDataURL(file);
     if(!silent) showToast(`Stock loaded: ${Object.keys(stock).length} fabric types`);
     addLog('STOCK_UPLOAD',`File: ${file.name} — ${Object.keys(stock).length} fabric types loaded`);
-    renderPage();
+    renderApp();
     return true;
   }catch(e){
     if(!silent) showToast('Error: '+e.message,'err');
@@ -522,7 +522,7 @@ async function restoreStockAuto(b64){
 function clearStock(){
   if(!confirm('Clear all stock data?')) return;
   STOCK={}; localStorage.removeItem(SK.ST); localStorage.removeItem(SK.AB);
-  addLog('STOCK_CLEAR','Stock data cleared'); showToast('Stock cleared','err'); renderPage();
+  addLog('STOCK_CLEAR','Stock data cleared'); showToast('Stock cleared','err'); renderApp();
 }
 
 function getStockFor(name){
@@ -589,7 +589,7 @@ async function fetchGitHubStock(isManual){
 
     if(isManual || sha!==GH_SHA){
       addLog('GH_SYNC_OK','GitHub stock updated — '+Object.keys(STOCK).length+' fabric types');
-      renderPage();
+      renderApp();
     }
     return true;
   }catch(e){
@@ -641,7 +641,7 @@ async function saveAndFetchGitHub(){
     addLog('GH_CONNECT','GitHub URL saved — '+Object.keys(STOCK).length+' fabric types');
     showToast('✓ Stock loaded: '+Object.keys(STOCK).length+' fabric types');
     startAutoSync();
-    renderPage();
+    renderApp();
   }catch(e){
     setStatus('Failed: '+e.message,'err');
     addLog('GH_ERR','Connect failed: '+e.message);
@@ -657,7 +657,7 @@ function clearGitHubUrl(){
   stopAutoSync();
   addLog('GH_DISCONNECT','GitHub URL disconnected');
   showToast('GitHub URL disconnected');
-  renderPage();
+  renderApp();
 }
 
 async function autoSyncStock(isManual=false){
@@ -786,6 +786,7 @@ function renderApp(){
     </div></div>`;
     return;
   }
+  
   // Simple sidebar and main content
   const pending=DB.users.filter(u=>u.status==='pending').length;
   const nav = isAdminLike()
@@ -814,7 +815,7 @@ function renderApp(){
     <div class="kpi"><div class="kpi-label">Pending</div><div class="kpi-val ${pending>0?'rd':'grn'}">${pending}</div></div>
     <div class="kpi"><div class="kpi-label">Users</div><div class="kpi-val prp">${DB.users.filter(u=>u.status==='approved'&&u.role!=='admin').length}</div></div></div>
     <div class="card"><div class="card-head"><span class="card-title">GitHub Stock URL</span></div>
-    <div class="info-box">Current stock URL: <code>${GH_URL || 'https://gist.githubusercontent.com/viphologram/12f3b69117bcdfdfd90214dec81293c4/raw/stock.json'}</code></div>
+    <div class="info-box">Current stock URL: <code>https://gist.githubusercontent.com/viphologram/12f3b69117bcdfdfd90214dec81293c4/raw/stock.json</code></div>
     <div><strong>${Object.keys(STOCK).length}</strong> fabric types loaded · <strong>${Object.values(STOCK).reduce((a,b)=>a+b.length,0)}</strong> shade variants</div>
     <button class="btn btn-sky btn-sm" style="margin-top:10px" onclick="goTo('github')">Go to GitHub Stock Page</button></div>`;
   else if(PAGE==='github') mainHtml = pageGitHubStock();
@@ -827,7 +828,7 @@ function goTo(p){ PAGE=p; closeSidebar(); renderApp(); }
 function toggleSidebar(){ document.getElementById('sidebar')?.classList.toggle('open'); document.getElementById('sb-overlay')?.classList.toggle('open'); }
 function closeSidebar(){ document.getElementById('sidebar')?.classList.remove('open'); document.getElementById('sb-overlay')?.classList.remove('open'); }
 
-// Expose functions
+// Expose global functions
 window.goTo = goTo;
 window.toggleSidebar = toggleSidebar;
 window.toggleTheme = toggleTheme;
@@ -840,6 +841,7 @@ window.clearGitHubUrl = clearGitHubUrl;
 window.autoSyncStock = autoSyncStock;
 window.downloadSampleStockJSON = downloadSampleStockJSON;
 
+// Start the app
 initDB().then(() => renderApp());
 </script>
 </body>
