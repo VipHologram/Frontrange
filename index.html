@@ -26,29 +26,25 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
 
 .auth-bg{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);position:relative}
-.auth-bg::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(232,160,32,.07) 0%,transparent 70%)}
 .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:28px;padding:44px 40px;width:100%;max-width:420px;box-shadow:var(--shadow);position:relative;z-index:1}
 .auth-brand{font-family:'Fraunces',serif;font-size:2rem;color:var(--gold);text-align:center}
 .auth-tagline{text-align:center;color:var(--t3);font-size:.75rem;margin-bottom:28px}
 .tab-strip{display:flex;gap:4px;background:var(--bg);border-radius:40px;padding:4px;margin-bottom:24px}
 .tab-btn{flex:1;padding:8px;border:none;background:transparent;color:var(--t2);font-weight:600;border-radius:30px;cursor:pointer}
-.tab-btn.on{background:var(--gold);color:#000;box-shadow:0 2px 10px rgba(232,160,32,.3)}
+.tab-btn.on{background:var(--gold);color:#000}
 .fld{margin-bottom:13px}
-.fld label{display:block;font-size:.67rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--t3);margin-bottom:5px}
-.fld input,.fld select{width:100%;padding:10px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'Sora',sans-serif;font-size:.86rem;outline:none}
-.fld input:focus,.fld select:focus{border-color:var(--gold)}
+.fld label{display:block;font-size:.67rem;font-weight:700;text-transform:uppercase;color:var(--t3);margin-bottom:5px}
+.fld input,.fld select{width:100%;padding:10px 14px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);outline:none}
 .auth-btn{width:100%;padding:11px;background:var(--gold);border:none;border-radius:30px;font-weight:700;color:#000;cursor:pointer;margin-top:8px}
 .err-msg{font-size:.73rem;color:var(--red);margin-top:6px;display:none;padding:7px 12px;background:rgba(240,77,77,.09);border-radius:8px}
 .err-msg.on{display:block}
 
-.sidebar{width:256px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;height:100vh;z-index:200;overflow-y:auto;transition:transform .25s}
+.sidebar{width:256px;background:var(--surface);border-right:1px solid var(--border);position:fixed;height:100vh;z-index:200;overflow-y:auto;transition:transform .25s}
 .sb-head{padding:22px 20px 18px;border-bottom:1px solid var(--border)}
 .sb-brand{font-family:'Fraunces',serif;font-size:1.28rem;color:var(--gold)}
-.sb-co{font-size:.67rem;display:block;color:var(--t3);margin-top:3px}
+.sb-co{font-size:.67rem;display:block;color:var(--t3)}
 .sb-nav{padding:10px 8px;flex:1}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;color:var(--t2);font-weight:500;cursor:pointer;margin-bottom:2px;position:relative}
 .nav-item:hover{background:var(--s2);color:var(--text)}
@@ -58,127 +54,73 @@ body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-he
 .nav-badge{background:var(--red);color:#fff;font-size:.62rem;border-radius:20px;padding:1px 6px;margin-left:auto}
 .sb-foot{padding:16px;border-top:1px solid var(--border)}
 .theme-pill{background:var(--s2);border:1px solid var(--border);width:100%;padding:7px;border-radius:30px;margin-bottom:12px;cursor:pointer;font-weight:600;color:var(--t2);text-align:center}
-.theme-pill:hover{border-color:var(--gold);color:var(--gold)}
 .user-row{display:flex;align-items:center;gap:9px}
 .uavatar{width:34px;height:34px;background:linear-gradient(135deg,var(--gold),#c47a00);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#000}
-.uname{font-size:.78rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uname{font-size:.78rem;font-weight:600;color:var(--text)}
 .urole{font-size:.63rem;color:var(--t3)}
 .exit-btn{background:transparent;border:1px solid var(--border);color:var(--t3);padding:5px 9px;border-radius:8px;cursor:pointer;margin-left:auto}
-.exit-btn:hover{border-color:var(--red);color:var(--red)}
 .main{margin-left:256px;flex:1;padding:28px 32px}
 
 .page-head{margin-bottom:24px}
-.page-title{font-family:'Fraunces',serif;font-size:1.85rem;color:var(--text);letter-spacing:-.3px}
+.page-title{font-family:'Fraunces',serif;font-size:1.85rem;color:var(--text)}
 .page-sub{color:var(--t3);font-size:.78rem;margin-top:3px}
 .kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px;margin-bottom:24px}
 .kpi{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px}
-.kpi-label{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--t3);margin-bottom:6px}
+.kpi-label{font-size:.65rem;font-weight:700;text-transform:uppercase;color:var(--t3);margin-bottom:6px}
 .kpi-val{font-size:2rem;font-weight:800;font-family:'Fraunces',serif}
 .gold{color:var(--gold)}.grn{color:var(--green)}.blu{color:var(--blue)}.sky{color:var(--sky)}.rd{color:var(--red)}.prp{color:var(--purple)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:18px}
 .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}
 .card-title{font-size:.9rem;font-weight:700;color:var(--text)}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:24px;font-weight:600;font-size:.74rem;border:none;cursor:pointer;transition:.15s;white-space:nowrap}
-.btn:hover{transform:translateY(-1px)}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:24px;font-weight:600;font-size:.74rem;border:none;cursor:pointer}
 .btn-gold{background:var(--gold);color:#000}
-.btn-gold:hover{background:var(--gold2);box-shadow:0 4px 14px rgba(232,160,32,.3)}
 .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--t2)}
-.btn-ghost:hover{border-color:var(--border2);color:var(--text)}
 .btn-green{background:rgba(39,201,138,.1);color:var(--green);border:1px solid rgba(39,201,138,.22)}
 .btn-red{background:rgba(240,77,77,.1);color:var(--red);border:1px solid rgba(240,77,77,.22)}
 .btn-blue{background:rgba(75,140,247,.1);color:var(--blue);border:1px solid rgba(75,140,247,.22)}
 .btn-sky{background:rgba(34,196,232,.1);color:var(--sky);border:1px solid rgba(34,196,232,.22)}
 .btn-sm{padding:4px 10px;font-size:.7rem}
-.btn-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
-.search-wrap{position:relative;margin-bottom:16px;display:flex;gap:10px;align-items:center}
+.btn-row{display:flex;flex-wrap:wrap;gap:5px}
+.search-wrap{position:relative;margin-bottom:16px;display:flex;gap:10px}
 .search-wrap input{width:100%;padding:10px 14px 10px 38px;background:var(--bg);border:1.5px solid var(--border);border-radius:30px;color:var(--text);outline:none}
-.search-wrap input:focus{border-color:var(--gold)}
-.search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--t3);font-size:.82rem;pointer-events:none}
+.search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--t3)}
 .tbl-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse}
-th{text-align:left;padding:12px 10px;font-size:.7rem;text-transform:uppercase;color:var(--t3);border-bottom:2px solid var(--border);white-space:nowrap;font-weight:700}
-td{padding:12px 10px;border-bottom:1px solid var(--border);color:var(--t2);vertical-align:middle;font-size:.82rem}
+th{text-align:left;padding:12px 10px;font-size:.7rem;text-transform:uppercase;color:var(--t3);border-bottom:2px solid var(--border)}
+td{padding:12px 10px;border-bottom:1px solid var(--border);color:var(--t2);font-size:.82rem}
 tr:hover td{background:var(--s2)}
-.empty-row td{text-align:center;padding:36px;color:var(--t3);font-style:italic}
-
 .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.67rem;font-weight:700}
 .b-admin{background:rgba(240,77,77,.1);color:var(--red)}
 .b-subadmin{background:rgba(155,109,255,.1);color:var(--purple)}
 .b-broker{background:rgba(75,140,247,.1);color:var(--blue)}
-.b-customer{background:rgba(34,196,232,.1);color:var(--sky)}
 .b-pending{background:rgba(232,160,32,.1);color:var(--gold)}
 .b-approved{background:rgba(39,201,138,.1);color:var(--green)}
-.b-inactive{background:rgba(79,94,115,.1);color:var(--t3)}
-
+.sdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
+.d-green{background:#16a34a}.d-orange{background:#ea580c}.d-red{background:#dc2626}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px}
-.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:24px;width:100%;max-width:660px;max-height:90vh;overflow-y:auto;padding:28px;animation:rise .22s ease}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:24px;width:100%;max-width:660px;max-height:90vh;overflow-y:auto;padding:28px}
 .modal-title{font-family:'Fraunces',serif;font-size:1.3rem;margin-bottom:18px;color:var(--text)}
-.modal-title.danger{color:var(--red)}
-.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .modal-fld{margin-bottom:11px}
 .modal-fld label{display:block;font-size:.64rem;font-weight:700;text-transform:uppercase;color:var(--t3);margin-bottom:4px}
 .modal-fld input{width:100%;padding:9px 12px;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;color:var(--text);outline:none}
-.modal-fld input:focus{border-color:var(--gold)}
-.modal-foot{display:flex;gap:9px;margin-top:20px;flex-wrap:wrap}
+.modal-foot{display:flex;gap:9px;margin-top:20px}
 .modal-foot .btn{flex:1;justify-content:center;padding:10px}
-.fab-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:14px}
-.fab-detail-grid label{font-size:.63rem;font-weight:700;text-transform:uppercase;color:var(--t3);display:block;margin-bottom:3px}
-.fab-detail-grid .val{font-size:.88rem;color:var(--text);font-weight:500}
-
-.stk-panel{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;margin-top:12px}
-.stk-title{font-size:.65rem;font-weight:700;text-transform:uppercase;color:var(--t3);margin-bottom:9px;display:flex;justify-content:space-between}
-.stk-tbl{width:100%;border-collapse:collapse;font-size:.79rem}
-.stk-tbl th{padding:6px 7px;font-size:.62rem;font-weight:700;color:var(--t3);border-bottom:1px solid var(--border)}
-.stk-tbl td{padding:7px 7px;border-bottom:1px solid var(--border);color:var(--t2)}
-.stk-total{display:flex;justify-content:space-between;padding:8px 7px 0;font-size:.8rem;font-weight:700;border-top:1px solid var(--border);margin-top:6px}
-
-.img-gallery{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.img-thumb{width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid var(--border);cursor:pointer}
-.img-thumb:hover{border-color:var(--gold);transform:scale(1.05)}
-.img-url-row{display:flex;gap:6px;align-items:center;margin-bottom:7px}
-.img-url-row input{flex:1;padding:8px 11px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;color:var(--text);outline:none}
-
-.drop-zone{border:2px dashed var(--border2);border-radius:16px;padding:32px 20px;text-align:center;cursor:pointer;background:var(--s2)}
-.drop-zone:hover,.drop-zone.drag-over{border-color:var(--gold);background:var(--gold-dim)}
-.drop-icon{font-size:2.5rem;margin-bottom:8px}
-
 .info-box{background:rgba(232,160,32,.06);border:1px solid rgba(232,160,32,.18);border-radius:10px;padding:11px 14px;font-size:.76rem;color:var(--t2);margin-bottom:14px}
-.info-box code{background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--gold)}
-
 #toast-root{position:fixed;bottom:20px;left:0;right:0;z-index:9999;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
-.toast{padding:9px 20px;border-radius:30px;font-size:.8rem;font-weight:600;box-shadow:var(--shadow);animation:rise .2s ease;white-space:nowrap;border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.toast{padding:9px 20px;border-radius:30px;font-size:.8rem;font-weight:600;box-shadow:var(--shadow);animation:rise .2s ease;border:1px solid var(--border);background:var(--surface);color:var(--text)}
 .toast-ok{background:rgba(39,201,138,.12);border-color:rgba(39,201,138,.3);color:var(--green)}
 .toast-err{background:rgba(240,77,77,.12);border-color:rgba(240,77,77,.3);color:var(--red)}
-
-.log-row{display:grid;grid-template-columns:148px 120px 125px 1fr;gap:9px;padding:8px 9px;border-bottom:1px solid var(--border);font-size:.77rem}
-.log-row:hover{background:var(--s2)}
-.log-head{font-size:.62rem;font-weight:700;text-transform:uppercase;color:var(--t3);padding:6px 9px;border-bottom:2px solid var(--border);display:grid;grid-template-columns:148px 120px 125px 1fr;gap:9px}
-.log-tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:.65rem;font-weight:700;background:rgba(75,140,247,.1);color:var(--blue)}
-
-.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.set-inp{width:100%;padding:10px 13px;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;color:var(--text);outline:none;margin-bottom:10px}
-.set-inp:focus{border-color:var(--gold)}
 .stock-input{width:80px;padding:5px 8px;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;color:var(--text);text-align:center}
-
-.gs-step{display:flex;gap:14px;padding:14px;background:var(--s2);border-radius:12px;margin-bottom:10px;border:1px solid var(--border)}
-.gs-num{width:28px;height:28px;background:var(--gold);color:#000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8rem}
-.gs-text{font-size:.8rem;color:var(--t2);line-height:1.65}
-.gs-text strong{color:var(--text)}
-.gs-text code{background:var(--bg);padding:1px 5px;border-radius:4px;color:var(--gold)}
-
+.url-text{font-family:monospace;font-size:13px;word-break:break-all;background:var(--surface);padding:10px;border-radius:6px;margin:10px 0;border:1px solid var(--border)}
 .hamburger{display:none;position:fixed;top:13px;left:13px;z-index:300;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:7px 10px;cursor:pointer}
 .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:199}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:820px){
   .sidebar{transform:translateX(-100%)}
-  .sidebar.open{transform:translateX(0);box-shadow:4px 0 30px rgba(0,0,0,.4)}
+  .sidebar.open{transform:translateX(0)}
   .sb-overlay.open{display:block}
   .main{margin-left:0;padding:60px 14px 18px}
   .hamburger{display:flex}
-  .kpi-row{grid-template-columns:1fr 1fr}
-  .fab-detail-grid,.modal-grid,.settings-grid{grid-template-columns:1fr}
-  .log-row,.log-head{grid-template-columns:110px 90px 1fr}
-  .log-row>*:last-child,.log-head>*:last-child{display:none}
 }
 </style>
 </head>
@@ -187,342 +129,147 @@ tr:hover td{background:var(--s2)}
 <div id="toast-root"></div>
 
 <script>
-'use strict';
+// ============================================================
+// FABRICFLOW PRO - COMPLETE ERP SYSTEM
+// Supports JSON format with "Item Name", "Design / Color No", "Quantity"
+// ============================================================
 
-const esc = s => { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+const esc = s => { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
 const san = (s, n=200) => s ? String(s).trim().slice(0,n) : '';
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36)+Math.random().toString(36).substr(2));
 const genSalt = () => { const a=new Uint8Array(16); crypto.getRandomValues(a); return Array.from(a,b=>b.toString(16).padStart(2,'0')).join(''); };
 const hashPass = async (p,s) => { const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(p+s)); return Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join(''); };
 const validMob = m => /^[6-9][0-9]{9}$/.test(m);
-const validEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 function showToast(msg,type='ok'){
   const el=document.createElement('div'); el.className=`toast toast-${type}`; el.textContent=msg;
   document.getElementById('toast-root').appendChild(el);
   setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),300);},2600);
 }
-const RL={}; const checkRL=id=>{const n=Date.now();if(!RL[id])RL[id]={c:0,r:n+60000};if(n>RL[id].r)RL[id]={c:0,r:n+60000};return++RL[id].c<=5;};
 
-const ROLE_LABELS = {admin:'Admin',subadmin:'Sub Admin',broker:'Broker/Agent',customer:'Customer'};
-const isAdmin = () => CU?.role === 'admin';
-const isSubAdmin = () => CU?.role === 'subadmin';
-const isAdminLike = () => ['admin','subadmin'].includes(CU?.role);
-const canEdit = () => CU?.role === 'admin';
-const isAdminOrSubAdmin = () => ['admin','subadmin'].includes(CU?.role);
-
-const SK = {U:'ff_u',F:'ff_f',L:'ff_l',CO:'ff_co',TH:'ff_th',ST:'ff_st',IM:'ff_im',AB:'ff_ab',GS:'ff_gs',GH:'ff_gh_url',GS2:'ff_gh_sha'};
-let GIST_TOKEN = ''; let GIST_ID = ''; let GIST_ETAG = ''; let DB_DIRTY = false; let _gistSyncTimer = null;
-const GIST_FILE = 'fabricflow_db.json';
-const GIST_SYNC_MS = 30000;
 let DB={users:[],fabrics:[],logs:[],company:'FabricFlow'};
-let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GS_URL='', GH_URL='', GH_SHA='';
+let CU=null, PAGE='dashboard', STOCK={}, GH_URL='', GH_SHA='', isDark=true;
 
-async function initDB(){
-  isDark = localStorage.getItem(SK.TH) !== 'light';
-  applyTheme(false);
-  GH_URL  = localStorage.getItem(SK.GH)  || '';
-  GH_SHA  = localStorage.getItem(SK.GS2) || '';
-  GS_URL  = localStorage.getItem(SK.GS)  || '';
-  GIST_TOKEN = localStorage.getItem('ff_gist_tok') || '';
-  GIST_ID    = localStorage.getItem('ff_gist_id')  || '';
-
-  if(GIST_TOKEN && GIST_ID){
-    try{
-      const data = await gistFetch();
-      if(data){ applyGistData(data); return; }
-    }catch(e){ console.warn('Gist load failed, using cache:',e.message); }
-  }
-  loadFromLocalCache();
-}
-
-function loadFromLocalCache(){
-  const su=localStorage.getItem(SK.U);
-  if(su){ try{ DB.users=JSON.parse(su); }catch(e){} }
-  if(!DB.users.length) createDefaultAdmin();
-  DB.fabrics = tryParse(localStorage.getItem(SK.F), []);
-  DB.logs    = tryParse(localStorage.getItem(SK.L), []);
-  DB.company = localStorage.getItem(SK.CO) || 'FabricFlow';
-  STOCK = tryParse(localStorage.getItem(SK.ST), {});
-  IMGS  = tryParse(localStorage.getItem(SK.IM), {});
-  const ab64=localStorage.getItem(SK.AB);
-  if(ab64 && Object.keys(STOCK).length===0) restoreStockAuto(ab64).catch(()=>{});
-}
-
-function tryParse(s, def){ try{ return s?JSON.parse(s):def; }catch(e){ return def; } }
-
+// Default admin creation
 async function createDefaultAdmin(){
   const salt=genSalt(), hash=await hashPass('admin123',salt);
   DB.users=[{id:uid(),fullName:'Master Admin',mobile:'9999999999',email:'admin@fabricflow.com',password:hash,salt,role:'admin',status:'approved',createdAt:new Date().toLocaleString()}];
-  cacheLocally();
+  saveToLocal();
 }
 
-function applyGistData(data){
-  if(data.users   && Array.isArray(data.users))   DB.users   = data.users;
-  if(data.fabrics && Array.isArray(data.fabrics)) DB.fabrics = data.fabrics;
-  if(data.logs    && Array.isArray(data.logs))    DB.logs    = data.logs.slice(0,500);
-  if(data.company) DB.company = data.company;
-  if(data.stock  && typeof data.stock==='object') STOCK = data.stock;
-  if(data.imgs   && typeof data.imgs==='object')  IMGS  = data.imgs;
-  if(data.gh_url) GH_URL = data.gh_url;
+function saveToLocal(){
+  localStorage.setItem('ff_users', JSON.stringify(DB.users));
+  localStorage.setItem('ff_fabrics', JSON.stringify(DB.fabrics));
+  localStorage.setItem('ff_logs', JSON.stringify(DB.logs));
+  localStorage.setItem('ff_company', DB.company);
+  localStorage.setItem('ff_stock', JSON.stringify(STOCK));
+  localStorage.setItem('ff_gh_url', GH_URL);
+  localStorage.setItem('ff_gh_sha', GH_SHA);
+  localStorage.setItem('ff_theme', isDark ? 'dark' : 'light');
+}
+
+function loadFromLocal(){
+  const users = localStorage.getItem('ff_users');
+  if(users) DB.users = JSON.parse(users);
   if(!DB.users.length) createDefaultAdmin();
-  cacheLocally();
-}
-
-function cacheLocally(){
-  localStorage.setItem(SK.U, JSON.stringify(DB.users));
-  localStorage.setItem(SK.F, JSON.stringify(DB.fabrics));
-  localStorage.setItem(SK.L, JSON.stringify(DB.logs));
-  localStorage.setItem(SK.CO, DB.company);
-  localStorage.setItem(SK.ST, JSON.stringify(STOCK));
-  localStorage.setItem(SK.IM, JSON.stringify(IMGS));
-}
-
-async function gistFetch(){
-  const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
-    headers:{'Authorization':'token '+GIST_TOKEN,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'}
-  });
-  if(r.status===404) throw new Error('Gist not found');
-  if(r.status===401) throw new Error('GitHub token invalid or expired');
-  if(!r.ok) throw new Error('GitHub API: HTTP '+r.status);
-  GIST_ETAG = r.headers.get('etag')||'';
-  const gist = await r.json();
-  const file = gist.files && gist.files[GIST_FILE];
-  if(!file) return null;
-  try{ return JSON.parse(file.content); }catch(e){ return null; }
-}
-
-async function gistSave(){
-  if(!GIST_TOKEN) return false;
-  const payload = {
-    users: DB.users, fabrics: DB.fabrics, logs: DB.logs.slice(0,200),
-    company: DB.company, stock: STOCK, imgs: IMGS, gh_url: GH_URL,
-    saved_at: new Date().toISOString(),
-  };
-  const body = {files:{}};
-  body.files[GIST_FILE] = {content: JSON.stringify(payload, null, 2)};
-
-  if(!GIST_ID){
-    body.description = 'FabricFlow Pro Shared Database';
-    body.public = false;
-    const r = await fetch('https://api.github.com/gists',{
-      method:'POST',
-      headers:{'Authorization':'token '+GIST_TOKEN,'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    });
-    if(!r.ok){ const e=await r.json(); throw new Error(e.message||'HTTP '+r.status); }
-    const g = await r.json();
-    GIST_ID = g.id;
-    localStorage.setItem('ff_gist_id', GIST_ID);
-    addLog('GIST_CREATED','Shared DB Gist created: '+GIST_ID);
-    return true;
-  }
-
-  const r = await fetch('https://api.github.com/gists/'+GIST_ID,{
-    method:'PATCH',
-    headers:{'Authorization':'token '+GIST_TOKEN,'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
-  if(r.status===404){ GIST_ID=''; localStorage.removeItem('ff_gist_id'); throw new Error('Gist not found — was it deleted?'); }
-  if(!r.ok){ const e=await r.json().catch(()=>{}); throw new Error(e?.message||'HTTP '+r.status); }
-  cacheLocally();
-  return true;
-}
-
-let _saveTimer=null;
-function scheduleSave(){
-  DB_DIRTY=true;
-  clearTimeout(_saveTimer);
-  _saveTimer=setTimeout(async()=>{
-    if(!DB_DIRTY) return;
-    cacheLocally();
-    if(GIST_TOKEN){
-      try{ await gistSave(); DB_DIRTY=false; }
-      catch(e){ console.error('Gist save failed:',e.message); addLog('GIST_ERR','Save failed: '+e.message); }
-    } else { DB_DIRTY=false; }
-  }, 1500);
-}
-
-async function startGistSync(){
-  if(_gistSyncTimer) clearInterval(_gistSyncTimer);
-  if(!GIST_TOKEN||!GIST_ID) return;
-  _gistSyncTimer = setInterval(async()=>{
-    if(DB_DIRTY) return;
-    try{
-      const data = await gistFetch();
-      if(!data) return;
-      const remoteUsers = JSON.stringify(data.users||[]);
-      const localUsers  = JSON.stringify(DB.users);
-      if(remoteUsers!==localUsers){
-        applyGistData(data);
-        const pending=DB.users.filter(u=>u.status==='pending').length;
-        const badges=document.querySelectorAll('.nav-badge');
-        badges.forEach(b=>{ if(b.closest('.nav-item[onclick*="users"]')) b.textContent=pending||''; });
-        if(CU?.role==='admin' && pending>0) renderApp();
-      }
-    }catch(e){}
-  }, GIST_SYNC_MS);
-}
-
-function saveDB(){
-  if(DB.logs.length>500) DB.logs=DB.logs.slice(0,500);
-  scheduleSave();
+  DB.fabrics = JSON.parse(localStorage.getItem('ff_fabrics') || '[]');
+  DB.logs = JSON.parse(localStorage.getItem('ff_logs') || '[]');
+  DB.company = localStorage.getItem('ff_company') || 'FabricFlow';
+  STOCK = JSON.parse(localStorage.getItem('ff_stock') || '{}');
+  GH_URL = localStorage.getItem('ff_gh_url') || '';
+  GH_SHA = localStorage.getItem('ff_gh_sha') || '';
+  isDark = localStorage.getItem('ff_theme') !== 'light';
+  applyTheme();
 }
 
 function addLog(action,details){
   DB.logs.unshift({id:uid(),userId:CU?.id||'sys',userName:CU?.fullName||'System',action,details,time:new Date().toLocaleString()});
   if(DB.logs.length>500) DB.logs=DB.logs.slice(0,500);
-  localStorage.setItem(SK.L,JSON.stringify(DB.logs));
+  localStorage.setItem('ff_logs', JSON.stringify(DB.logs));
 }
 
 function applyTheme(){ document.documentElement.setAttribute('data-theme', isDark?'dark':'light'); }
-function toggleTheme(){ isDark=!isDark; localStorage.setItem(SK.TH,isDark?'dark':'light'); applyTheme(); renderApp(); }
-
-async function doLogin(){
-  const id=document.getElementById('l-id').value.trim(), pw=document.getElementById('l-pw').value;
-  const err=document.getElementById('l-err'); err.classList.remove('on');
-  if(!id||!pw){ err.textContent='All fields required'; err.classList.add('on'); return; }
-  if(!checkRL(id)){ err.textContent='Too many attempts. Wait 1 min.'; err.classList.add('on'); return; }
-  const user=DB.users.find(u=>u.mobile===id||u.email===id);
-  if(!user){ err.textContent='User not found'; err.classList.add('on'); return; }
-  if(user.status!=='approved'){ err.textContent=user.status==='pending'?'Pending admin approval':'Account deactivated'; err.classList.add('on'); return; }
-  const hash=await hashPass(pw,user.salt);
-  if(hash!==user.password){ err.textContent='Wrong password'; err.classList.add('on'); return; }
-  delete RL[id]; CU=user; sessionStorage.setItem('ffs',JSON.stringify({id:user.id}));
-  addLog('LOGIN',ROLE_LABELS[user.role]||user.role);
-  PAGE=isAdminLike()?'dashboard':'catalog';
-  renderApp();
-}
-
-async function doRegister(){
-  const name=san(document.getElementById('r-name').value,100), mob=san(document.getElementById('r-mob').value,10);
-  const email=san(document.getElementById('r-email').value,100), pw=document.getElementById('r-pw').value;
-  const role=document.getElementById('r-role').value;
-  const err=document.getElementById('r-err'); err.classList.remove('on');
-  if(!name||!mob||!pw){ err.textContent='Name, mobile and password required'; err.classList.add('on'); return; }
-  if(!validMob(mob)){ err.textContent='Invalid mobile (10 digits, start 6-9)'; err.classList.add('on'); return; }
-  if(email&&!validEmail(email)){ err.textContent='Invalid email format'; err.classList.add('on'); return; }
-  if(pw.length<6){ err.textContent='Password min 6 characters'; err.classList.add('on'); return; }
-  if(DB.users.find(u=>u.mobile===mob)){ err.textContent='Mobile already registered'; err.classList.add('on'); return; }
-  const salt=genSalt(), hash=await hashPass(pw,salt);
-  DB.users.push({id:uid(),fullName:esc(name),mobile:mob,email:email||'',password:hash,salt,role,status:'pending',createdAt:new Date().toLocaleString()});
-  saveDB(); addLog('REGISTER',`${name} as ${role}`);
-  showToast('Registered! Awaiting admin approval.');
-  switchAuthTab('login');
-}
-
-function logout(){ stopAutoSync(); if(_gistSyncTimer){clearInterval(_gistSyncTimer);_gistSyncTimer=null;} sessionStorage.removeItem('ffs'); CU=null; renderApp(); }
-function switchAuthTab(t){
-  document.getElementById('lf').style.display=t==='login'?'block':'none';
-  document.getElementById('rf').style.display=t==='register'?'block':'none';
-  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.toggle('on',el.dataset.tab===t));
-}
+function toggleTheme(){ isDark=!isDark; applyTheme(); saveToLocal(); renderApp(); }
 
 // ========== STOCK PARSING - SUPPORTS YOUR JSON FORMAT ==========
 function parseStockJSON(json){
-  if(!Array.isArray(json)) throw new Error('Expected JSON array, got '+typeof json);
+  if(!Array.isArray(json)) throw new Error('Expected JSON array');
   const stock={};
   json.forEach(row=>{
-    // Support multiple field name formats
-    let name = row.fabric || row.Fabric || row.FABRIC || 
-               row["Item Name"] || row["ITEM NAME"] || row["item name"] ||
-               row["ItemName"] || row["itemName"];
-    
-    let design = row.design || row.Design || row.DESIGN || 
-                 row["Design / Color No"] || row["DESIGN / COLOR NO"] ||
-                 row["Design"] || row["Color No"] || row["Shade"];
-    
-    let qty = row.qty || row.Qty || row.QTY || 
-              row.Quantity || row.QUANTITY || row["Quantity"];
-    
-    let unit = row.unit || row.Unit || row.UNIT || 
-               row["Unit"] || "Rolls";
-    
-    let comment = row.comment || row.Comment || row.COMMENT || 
-                  row["Comment"] || "";
-    
+    let name = row.fabric || row.Fabric || row["Item Name"] || row["ITEM NAME"];
+    let design = row.design || row.Design || row["Design / Color No"] || row["DESIGN / COLOR NO"];
+    let qty = row.qty || row.Qty || row.Quantity || row["Quantity"];
+    let unit = row.unit || row.Unit || "Rolls";
+    let comment = row.comment || row.Comment || "";
     if(!name) return;
-    
     name = name.toString().trim().toUpperCase();
     design = design ? design.toString().trim() : "MAIN";
     qty = parseFloat(qty) || 0;
-    
     if(!stock[name]) stock[name]=[];
     stock[name].push({design, qty, unit, comment});
   });
   return stock;
 }
 
-async function parseStockFile(file){
-  const n=file.name.toLowerCase();
-  if(n.endsWith('.csv')) return parseStockCSV(file);
-  if(n.endsWith('.xlsx')||n.endsWith('.xls')) return parseStockXLSX(file);
-  throw new Error('Unsupported file. Use .xlsx .xls or .csv');
-}
-
-async function parseStockXLSX(file){
-  return new Promise((res,rej)=>{
-    const r=new FileReader(); r.onerror=rej;
-    r.onload=e=>{ 
-      try{ 
-        const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'}); 
-        const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-        res(parseStockJSON(json));
-      }catch(e){rej(e);} 
-    };
-    r.readAsArrayBuffer(file);
-  });
-}
-
-async function parseStockCSV(file){
-  return new Promise((res,rej)=>{
-    const r=new FileReader(); r.onerror=rej;
-    r.onload=e=>{
-      try{
-        const lines=e.target.result.replace(/\r/g,'').split('\n');
-        const headers=lines[0].split(',').map(h=>h.replace(/^"|"$/g,'').trim());
-        const json=[];
-        for(let i=1;i<lines.length;i++){
-          if(!lines[i].trim()) continue;
-          const values=lines[i].split(',').map(v=>v.replace(/^"|"$/g,'').trim());
-          const row={};
-          headers.forEach((h,idx)=>{ row[h]=values[idx]||''; });
-          json.push(row);
-        }
-        res(parseStockJSON(json));
-      }catch(e){rej(e);}
-    };
-    r.readAsText(file,'UTF-8');
-  });
-}
-
-async function uploadStockFile(file,silent=false){
+async function fetchGitHubStock(){
+  if(!GH_URL) return false;
   try{
-    const stock=await parseStockFile(file); 
-    STOCK=stock;
-    localStorage.setItem(SK.ST,JSON.stringify(STOCK));
-    const r2=new FileReader(); r2.onload=ev=>localStorage.setItem(SK.AB,ev.target.result); r2.readAsDataURL(file);
-    if(!silent) showToast(`Stock loaded: ${Object.keys(stock).length} fabric types`);
-    addLog('STOCK_UPLOAD',`File: ${file.name} — ${Object.keys(stock).length} fabric types loaded`);
-    renderApp();
-    return true;
+    const url = GH_URL.includes('?') ? GH_URL+'&_t='+Date.now() : GH_URL+'?_t='+Date.now();
+    const r = await fetch(url, {cache:'no-cache'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const text = await r.text();
+    const json = JSON.parse(text);
+    const newStock = parseStockJSON(json);
+    if(Object.keys(newStock).length){
+      STOCK = newStock;
+      saveToLocal();
+      addLog('STOCK_SYNC', `Loaded ${Object.keys(STOCK).length} fabric types from GitHub`);
+      renderApp();
+      return true;
+    }
+    return false;
   }catch(e){
-    if(!silent) showToast('Error: '+e.message,'err');
-    addLog('STOCK_UPLOAD_ERR', `File: ${file.name} — Error: ${e.message}`);
+    addLog('STOCK_SYNC_ERR', e.message);
     return false;
   }
 }
 
-async function restoreStockAuto(b64){
+async function saveAndFetchGitHub(){
+  const url = document.getElementById('gh-url-inp')?.value.trim();
+  if(!url){ showToast('Enter GitHub raw URL','err'); return; }
+  const btn = document.getElementById('gh-fetch-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Fetching…'; }
   try{
-    const blob=await(await fetch(b64)).blob();
-    await uploadStockFile(new File([blob],'auto.xlsx',{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),true);
-  }catch(e){ console.warn('auto restore failed',e); }
+    const fetchUrl = url.includes('?') ? url+'&_t='+Date.now() : url+'?_t='+Date.now();
+    const r = await fetch(fetchUrl, {cache:'no-cache'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const text = await r.text();
+    const json = JSON.parse(text);
+    const newStock = parseStockJSON(json);
+    if(!Object.keys(newStock).length) throw new Error('No fabric data found');
+    
+    let hash=0;
+    for(let i=0;i<Math.min(text.length,2000);i++) hash=((hash<<5)-hash)+text.charCodeAt(i)|0;
+    GH_SHA = String(hash);
+    GH_URL = url;
+    STOCK = newStock;
+    saveToLocal();
+    addLog('GH_CONNECT', `Loaded ${Object.keys(STOCK).length} fabric types`);
+    showToast(`✓ Loaded ${Object.keys(STOCK).length} fabric types`);
+    renderApp();
+  }catch(e){
+    showToast('Error: '+e.message,'err');
+    addLog('GH_ERR', e.message);
+  } finally {
+    if(btn){ btn.disabled=false; btn.textContent='Connect & Fetch'; }
+  }
 }
 
-function clearStock(){
-  if(!confirm('Clear all stock data?')) return;
-  STOCK={}; localStorage.removeItem(SK.ST); localStorage.removeItem(SK.AB);
-  addLog('STOCK_CLEAR','Stock data cleared'); showToast('Stock cleared','err'); renderApp();
+function clearGitHubUrl(){
+  GH_URL=''; GH_SHA='';
+  saveToLocal();
+  addLog('GH_DISCONNECT','GitHub URL disconnected');
+  showToast('GitHub URL disconnected');
+  renderApp();
 }
 
 function getStockFor(name){
@@ -533,293 +280,412 @@ function getStockFor(name){
   return k?STOCK[k]:null;
 }
 
-// ========== GITHUB STOCK SYNC ==========
-let _autoSyncTimer = null;
-const AUTO_SYNC_INTERVAL = 2 * 60 * 1000;
-
-function showSyncBadge(state, msg){
-  let el = document.getElementById('sync-badge');
-  if(!el){
-    el = document.createElement('div'); el.id='sync-badge';
-    el.style.cssText='position:fixed;bottom:58px;right:18px;z-index:8888;font-size:.68rem;font-weight:700;padding:4px 11px;border-radius:20px;display:flex;align-items:center;gap:5px;transition:opacity .5s;pointer-events:none;box-shadow:0 2px 10px rgba(0,0,0,.3)';
-    document.body.appendChild(el);
-  }
-  const S={
-    syncing:{ bg:'rgba(75,140,247,.15)', bd:'rgba(75,140,247,.3)', col:'var(--blue)', ico:'⟳', hide:0 },
-    ok:     { bg:'rgba(39,201,138,.12)', bd:'rgba(39,201,138,.28)',col:'var(--green)', ico:'✓', hide:4000 },
-    nochange:{bg:'rgba(39,201,138,.07)', bd:'rgba(39,201,138,.15)',col:'var(--green)', ico:'✓', hide:2500 },
-    err:    { bg:'rgba(240,77,77,.10)', bd:'rgba(240,77,77,.25)', col:'var(--red)', ico:'⚠', hide:7000 },
-  };
-  const s=S[state]||S.ok;
-  el.style.background=s.bg; el.style.border='1px solid '+s.bd;
-  el.style.color=s.col; el.style.opacity='1';
-  el.innerHTML=s.ico+' '+(msg||(state==='syncing'?'Syncing…':state==='ok'?'Stock updated':'Sync failed'));
-  if(s.hide) setTimeout(()=>{ if(el) el.style.opacity='0'; }, s.hide);
+// ========== FABRIC CRUD ==========
+function getCategoryList(){
+  const used=[...new Set(DB.fabrics.map(f=>f.cat||'').filter(Boolean))];
+  return used.length ? used : ['Suiting','Shirting','Ladies','Children'];
 }
 
-async function fetchGitHubStock(isManual){
-  if(!GH_URL) return false;
-  try{
-    const url = GH_URL.includes('?') ? GH_URL+'&_t='+Date.now() : GH_URL+'?_t='+Date.now();
-    const r = await fetch(url, {cache:'no-cache'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const text = await r.text();
-    if(!text||text.trim().length<5) throw new Error('Empty response');
+function addFabric(d){
+  if(!d.sn||!d.name){ showToast('SN & Name required','err'); return false; }
+  if(DB.fabrics.some(f=>f.sn===d.sn || f.name.toLowerCase()===d.name.toLowerCase())){ 
+    showToast('Duplicate SN or Name','err'); return false; 
+  }
+  DB.fabrics.push({id:uid(), sn:san(d.sn,20), name:san(d.name,80), cat:san(d.cat||'',50), 
+    gsm:san(d.gsm||'',30), width:san(d.width||'',30), comp:san(d.comp||'',100), 
+    hf:san(d.hf||'',20), rate:san(d.rate||'',30)});
+  saveToLocal(); addLog('ADD_FABRIC',`${d.sn} - ${d.name}`);
+  showToast(`Added ${d.name}`);
+  renderApp(); return true;
+}
 
-    let json;
-    try{ json=JSON.parse(text); }
-    catch(pe){ throw new Error('Invalid JSON: '+pe.message); }
-
-    const newStock = parseStockJSON(json);
-    if(!Object.keys(newStock).length) throw new Error('No fabric data found');
-
-    let hash=0;
-    for(let i=0;i<Math.min(text.length,2000);i++) hash=((hash<<5)-hash)+text.charCodeAt(i)|0;
-    const sha=String(hash);
-
-    if(!isManual && sha===GH_SHA){
-      showSyncBadge('nochange','No changes · '+new Date().toLocaleTimeString());
-      return false;
-    }
-
-    GH_SHA=sha; localStorage.setItem(SK.GS2, GH_SHA);
-    STOCK=newStock; localStorage.setItem(SK.ST,JSON.stringify(STOCK));
-    const now=new Date().toLocaleString();
-    localStorage.setItem('ff_last_sync',now);
-
-    if(isManual || sha!==GH_SHA){
-      addLog('GH_SYNC_OK','GitHub stock updated — '+Object.keys(STOCK).length+' fabric types');
-      renderApp();
-    }
-    return true;
-  }catch(e){
-    addLog('GH_SYNC_ERR','GitHub fetch error: '+e.message);
-    throw e;
+function updateFabric(id,d){
+  const i=DB.fabrics.findIndex(f=>f.id===id);
+  if(i!==-1){ 
+    DB.fabrics[i]={...DB.fabrics[i], ...d}; 
+    saveToLocal(); addLog('EDIT_FABRIC',`${d.sn} - ${d.name}`); 
+    showToast('Fabric updated'); renderApp(); 
   }
 }
 
-async function saveAndFetchGitHub(){
-  const url = (document.getElementById('gh-url-inp')?.value||'').trim();
-  if(!url){ showToast('Paste your GitHub raw JSON URL','err'); return; }
-  if(!url.startsWith('http')){ showToast('Enter a valid URL starting with https://','err'); return; }
-  
-  const btn = document.getElementById('gh-fetch-btn');
-  if(btn){ btn.disabled=true; btn.textContent='Fetching…'; }
-  const setStatus=(msg,type)=>{
-    const el=document.getElementById('gh-status');
-    if(el){ el.textContent=msg; el.style.color=type==='err'?'var(--red)':type==='ok'?'var(--green)':'var(--t2)'; }
-  };
-  try{
-    setStatus('Connecting to GitHub…');
-    const fetchUrl = url.includes('?') ? url+'&_t='+Date.now() : url+'?_t='+Date.now();
-    const r = await fetch(fetchUrl, {cache:'no-cache'});
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const text = await r.text();
-    if(!text||text.trim().length<5) throw new Error('Empty response');
-
-    let json;
-    try{ json=JSON.parse(text); }
-    catch(pe){ throw new Error('Invalid JSON: '+pe.message); }
-
-    const newStock = parseStockJSON(json);
-    if(!Object.keys(newStock).length) throw new Error('No fabric data found');
-
-    let hash=0;
-    for(let i=0;i<Math.min(text.length,2000);i++) hash=((hash<<5)-hash)+text.charCodeAt(i)|0;
-    GH_SHA = String(hash);
-
-    GH_URL=url;
-    localStorage.setItem(SK.GH, GH_URL);
-    localStorage.setItem(SK.GS2, GH_SHA);
-    if(GIST_TOKEN) saveDB();
-    STOCK=newStock;
-    localStorage.setItem(SK.ST,JSON.stringify(STOCK));
-    const now=new Date().toLocaleString();
-    localStorage.setItem('ff_last_sync',now);
-
-    setStatus('✓ Connected — '+Object.keys(STOCK).length+' fabric types loaded · '+now,'ok');
-    addLog('GH_CONNECT','GitHub URL saved — '+Object.keys(STOCK).length+' fabric types');
-    showToast('✓ Stock loaded: '+Object.keys(STOCK).length+' fabric types');
-    startAutoSync();
+function deleteFabric(id){
+  const f=DB.fabrics.find(f=>f.id===id);
+  if(f && confirm(`Delete "${f.name}"?`)){
+    DB.fabrics=DB.fabrics.filter(f=>f.id!==id);
+    saveToLocal(); addLog('DELETE_FABRIC',f.name);
+    showToast(`Deleted ${f.name}`,'err');
     renderApp();
-  }catch(e){
-    setStatus('Failed: '+e.message,'err');
-    addLog('GH_ERR','Connect failed: '+e.message);
-    showToast('Error: '+e.message,'err');
-  } finally {
-    if(btn){ btn.disabled=false; btn.textContent='🐙 Connect & Fetch'; }
   }
 }
 
-function clearGitHubUrl(){
-  GH_URL=''; GH_SHA='';
-  localStorage.removeItem(SK.GH); localStorage.removeItem(SK.GS2);
-  stopAutoSync();
-  addLog('GH_DISCONNECT','GitHub URL disconnected');
-  showToast('GitHub URL disconnected');
+function updateStockQuantity(fabricName, newQty){
+  const qty=parseInt(newQty) || 0;
+  const up=fabricName.toUpperCase().trim();
+  if(STOCK[up]){ STOCK[up][0].qty = qty; }
+  else { STOCK[up] = [{ design: 'MAIN', qty: qty, unit: 'Rolls', comment: '' }]; }
+  saveToLocal();
+  addLog('UPDATE_STOCK', `${fabricName} → ${qty} Rolls`);
+  showToast(`${fabricName} stock updated to ${qty}`);
   renderApp();
 }
 
-async function autoSyncStock(isManual=false){
-  if(!GH_URL) return;
-  showSyncBadge('syncing');
-  try{
-    await fetchGitHubStock(isManual);
-    showSyncBadge('ok','Stock sync completed');
-    if(isManual) showToast('Stock sync completed');
-  }catch(e){
-    showSyncBadge('err','Sync failed — check Logs');
-    if(isManual) showToast('Sync failed: '+e.message,'err');
-  }
+// ========== USER MANAGEMENT ==========
+function approveUser(id){ 
+  const u=DB.users.find(u=>u.id===id); 
+  if(u){ u.status='approved'; saveToLocal(); addLog('APPROVE',u.fullName); showToast(`Approved ${u.fullName}`); renderApp(); } 
+}
+function rejectUser(id){ 
+  const u=DB.users.find(u=>u.id===id); 
+  DB.users=DB.users.filter(u=>u.id!==id); saveToLocal(); addLog('REJECT',u?.fullName||id); showToast('User rejected','err'); renderApp(); 
+}
+function deactivateUser(id){ 
+  const u=DB.users.find(u=>u.id===id); 
+  if(u && u.role!=='admin'){ u.status='inactive'; saveToLocal(); addLog('DEACTIVATE',u.fullName); showToast(`${u.fullName} deactivated`); renderApp(); } 
+}
+function activateUser(id){ 
+  const u=DB.users.find(u=>u.id===id); 
+  if(u){ u.status='approved'; saveToLocal(); addLog('ACTIVATE',u.fullName); showToast(`${u.fullName} activated`); renderApp(); } 
 }
 
-function startAutoSync(){
-  if(_autoSyncTimer) clearInterval(_autoSyncTimer);
-  if(!GH_URL) return;
-  setTimeout(()=>autoSyncStock(false), 2000);
-  _autoSyncTimer = setInterval(()=>autoSyncStock(false), AUTO_SYNC_INTERVAL);
+// ========== AUTH ==========
+async function doLogin(){
+  const id=document.getElementById('l-id').value.trim();
+  const pw=document.getElementById('l-pw').value;
+  const err=document.getElementById('l-err'); err.classList.remove('on');
+  const user=DB.users.find(u=>u.mobile===id || u.email===id);
+  if(!user){ err.textContent='User not found'; err.classList.add('on'); return; }
+  if(user.status!=='approved'){ err.textContent='Account not approved'; err.classList.add('on'); return; }
+  const hash=await hashPass(pw,user.salt);
+  if(hash!==user.password){ err.textContent='Wrong password'; err.classList.add('on'); return; }
+  CU=user; sessionStorage.setItem('ffs',JSON.stringify({id:user.id}));
+  addLog('LOGIN',user.role);
+  PAGE='dashboard';
+  renderApp();
 }
 
-function stopAutoSync(){
-  if(_autoSyncTimer){ clearInterval(_autoSyncTimer); _autoSyncTimer=null; }
+async function doRegister(){
+  const name=san(document.getElementById('r-name').value,100);
+  const mob=san(document.getElementById('r-mob').value,10);
+  const email=san(document.getElementById('r-email').value,100);
+  const pw=document.getElementById('r-pw').value;
+  const role=document.getElementById('r-role').value;
+  const err=document.getElementById('r-err'); err.classList.remove('on');
+  if(!name||!mob||!pw){ err.textContent='Name, mobile and password required'; err.classList.add('on'); return; }
+  if(!validMob(mob)){ err.textContent='Invalid mobile'; err.classList.add('on'); return; }
+  if(pw.length<6){ err.textContent='Password min 6 characters'; err.classList.add('on'); return; }
+  if(DB.users.find(u=>u.mobile===mob)){ err.textContent='Mobile already registered'; err.classList.add('on'); return; }
+  const salt=genSalt(), hash=await hashPass(pw,salt);
+  DB.users.push({id:uid(),fullName:name,mobile:mob,email:email||'',password:hash,salt,role,status:'pending',createdAt:new Date().toLocaleString()});
+  saveToLocal(); addLog('REGISTER',`${name} as ${role}`);
+  showToast('Registered! Awaiting admin approval.');
+  switchAuthTab('login');
 }
 
-// ========== OTHER FUNCTIONS ==========
-function downloadSampleStockJSON(){
-  const sample=[
-    {"Item Name": "BARBIE", "Design / Color No": "1", "Quantity": 230, "Unit": "Rolls", "Comment": "K"},
-    {"Item Name": "BARBIE", "Design / Color No": "3", "Quantity": 29, "Unit": "Rolls", "Comment": ""},
-    {"Item Name": "KOREAN", "Design / Color No": "1", "Quantity": 284, "Unit": "Rolls", "Comment": ""},
-  ];
-  const blob=new Blob([JSON.stringify(sample,null,2)],{type:'application/json'});
-  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download='stock.json'; a.click(); URL.revokeObjectURL(a.href);
-  showToast('Downloaded stock.json — uses Item Name, Design / Color No, Quantity format');
+function logout(){ sessionStorage.removeItem('ffs'); CU=null; renderApp(); }
+function switchAuthTab(t){
+  document.getElementById('lf').style.display=t==='login'?'block':'none';
+  document.getElementById('rf').style.display=t==='register'?'block':'none';
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.toggle('on',el.dataset.tab===t));
 }
 
-// ========== RENDER FUNCTIONS ==========
-function pageGitHubStock(){
-  const lastSync = localStorage.getItem('ff_last_sync')||'Not yet';
-  return `<div class="page-head">
-    <div class="page-title">🐙 GitHub Stock Sync</div>
-    <div class="page-sub">Auto-fetch stock from a GitHub raw JSON file — supports "Item Name", "Design / Color No", "Quantity" format</div>
+// ========== RENDER PAGES ==========
+function pageDashboard(){
+  const pending=DB.users.filter(u=>u.status==='pending').length;
+  const tStk=Object.values(STOCK).reduce((a,b)=>a+b.reduce((x,y)=>x+(typeof y.qty==='number'?y.qty:0),0),0);
+  return `<div class="page-head"><div class="page-title">Dashboard</div><div class="page-sub">Welcome back, ${esc(CU?.fullName)}</div></div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Fabrics</div><div class="kpi-val gold">${DB.fabrics.length}</div></div>
+    <div class="kpi"><div class="kpi-label">Stock Types</div><div class="kpi-val grn">${Object.keys(STOCK).length}</div></div>
+    <div class="kpi"><div class="kpi-label">Total Stock</div><div class="kpi-val blu">${tStk.toLocaleString('en-IN')}</div></div>
+    <div class="kpi"><div class="kpi-label">Pending Users</div><div class="kpi-val ${pending>0?'rd':'grn'}">${pending}</div></div>
+    <div class="kpi"><div class="kpi-label">Total Users</div><div class="kpi-val prp">${DB.users.filter(u=>u.status==='approved'&&u.role!=='admin').length}</div></div>
   </div>
-
-  <div class="card">
-    <div class="card-head"><span class="card-title">GitHub Raw JSON URL</span></div>
-    <div class="info-box">
-      <strong>Your JSON file format should be:</strong><br>
-      <code style="display:block;margin-top:6px">[{"Item Name":"BARBIE","Design / Color No":"1","Quantity":230,"Unit":"Rolls","Comment":"K"}, ...]</code><br>
-      <strong style="margin-top:6px;display:block">Your current Gist URL:</strong>
-      <code style="display:block;margin-top:4px;word-break:break-all">https://gist.githubusercontent.com/viphologram/12f3b69117bcdfdfd90214dec81293c4/raw/stock.json</code>
-    </div>
-
-    <div style="display:flex;gap:9px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
-      <input id="gh-url-inp" class="set-inp" style="flex:1;min-width:200px;margin:0"
-        placeholder="https://raw.githubusercontent.com/YourName/stock-data/main/stock.json"
-        value="${esc(GH_URL || 'https://gist.githubusercontent.com/viphologram/12f3b69117bcdfdfd90214dec81293c4/raw/stock.json')}" maxlength="600">
-      <button id="gh-fetch-btn" class="btn btn-gold" onclick="saveAndFetchGitHub()">🐙 Connect & Fetch</button>
-      ${GH_URL ? '<button class="btn btn-ghost" onclick="clearGitHubUrl()">✕ Disconnect</button>' : ''}
-    </div>
-    <div id="gh-status" style="font-size:.78rem;min-height:18px;font-weight:500;margin-bottom:8px"></div>
-
-    <div style="padding:10px 14px;background:var(--s2);border-radius:10px;border:1px solid var(--border);font-size:.76rem;color:var(--t2);display:flex;flex-wrap:wrap;gap:12px;align-items:center">
-      <span>${GH_URL
-        ? '<span style="color:var(--green)">● Auto-Sync Active</span> — checks GitHub every 2 minutes'
-        : '<span style="color:var(--gold)">● Using your Gist URL — will load stock data!</span>'}</span>
-      <span>🕐 Last sync: <strong style="color:var(--text)">${lastSync}</strong></span>
-      <span>📦 Stock: <strong style="color:var(--gold)">${Object.keys(STOCK).length} fabric types · ${Object.values(STOCK).reduce((a,b)=>a+b.length,0)} shades</strong></span>
-      <span style="margin-left:auto"><button class="btn btn-sm btn-blue" onclick="autoSyncStock(true)">⟳ Sync Now</button></span>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-head"><span class="card-title">📄 Your stock.json Format (Working!)</span></div>
-    <pre style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:.72rem;color:var(--sky);overflow-x:auto;line-height:1.6">[
-  {"Item Name": "BARBIE",       "Design / Color No": "1",     "Quantity": 230, "Unit": "Rolls",  "Comment": "K"},
-  {"Item Name": "BARBIE",       "Design / Color No": "3",     "Quantity": 29,  "Unit": "Rolls",  "Comment": ""},
-  {"Item Name": "KOREAN",       "Design / Color No": "1",     "Quantity": 284, "Unit": "Rolls",  "Comment": ""},
-  {"Item Name": "AIR DROP",     "Design / Color No": "12",    "Quantity": 29,  "Unit": "Rolls",  "Comment": ""}
-]</pre>
-  </div>
-
-  <div class="card">
-    <div class="card-head"><span class="card-title">⬇ Download Sample</span></div>
-    <button class="btn btn-ghost btn-sm" onclick="downloadSampleStockJSON()">📥 Download Sample stock.json</button>
+  ${GH_URL ? `<div class="info-box">✓ GitHub Auto-Sync Active · Last sync: ${localStorage.getItem('ff_last_sync')||'pending'}</div>` : ''}
+  <div class="card"><div class="card-head"><span class="card-title">Quick Actions</span></div>
+    <div class="btn-row"><button class="btn btn-gold" onclick="goTo('github')">🐙 Sync from GitHub</button>
+    <button class="btn btn-blue" onclick="goTo('catalog')">📋 Manage Fabrics</button>
+    <button class="btn btn-sky" onclick="goTo('users')">👥 Manage Users</button></div>
   </div>`;
 }
 
+function pageCatalog(){
+  const search = document.getElementById('cat-search')?.value?.toLowerCase() || '';
+  const filtered = DB.fabrics.filter(f=>f.name.toLowerCase().includes(search) || f.sn.toLowerCase().includes(search));
+  const admin = CU?.role === 'admin';
+  return `<div class="page-head"><div class="page-title">Fabric Catalog</div><div class="page-sub">${DB.fabrics.length} fabrics</div></div>
+  <div class="card"><div class="card-head"><span class="card-title">All Fabrics</span>
+    ${admin ? `<div class="btn-row"><button class="btn btn-gold btn-sm" onclick="showAddFabricModal()">+ Add Fabric</button></div>` : ''}</div>
+    <div class="search-wrap"><span class="search-ico">⌕</span><input id="cat-search" placeholder="Search..." oninput="renderApp()"></div>
+    <div class="tbl-wrap"><table><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>Stock</th><th>Actions</th></tr></thead>
+    <tbody>${filtered.map(f=>`<tr><td>${esc(f.sn)}</td><td><strong>${esc(f.name)}</strong></td>
+    <td>${esc(f.gsm||'—')}</td><td>${esc(f.width||'—')}</td><td class="gold">${esc(f.rate||'—')}</td>
+    <td><input type="number" class="stock-input" value="${getStockFor(f.name)?.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0)||0}" onchange="updateStockQuantity('${f.name}',this.value)"></td>
+    <td class="btn-row">${admin ? `<button class="btn btn-sm btn-ghost" onclick="editFabric('${f.id}')">Edit</button>
+    <button class="btn btn-sm btn-red" onclick="deleteFabric('${f.id}')">Del</button>` : ''}
+    <button class="btn btn-sm btn-green" onclick="shareFabricWA('${f.id}')">Share</button></td></tr>`).join('') || '<tr><td colspan="7">No fabrics</td></tr>'}</tbody></table></div></div>`;
+}
+
+function pageStock(){
+  const admin = CU?.role === 'admin' || CU?.role === 'subadmin';
+  return `<div class="page-head"><div class="page-title">Stock Inventory</div><div class="page-sub">${Object.keys(STOCK).length} fabric types</div></div>
+  <div class="card"><div class="card-head"><span class="card-title">Upload/Update Stock</span>
+    ${admin ? `<div class="btn-row"><button class="btn btn-gold btn-sm" onclick="goTo('github')">🐙 Sync from GitHub</button></div>` : ''}</div>
+    <div class="info-box">Current stock source: ${GH_URL ? `<code>${esc(GH_URL)}</code>` : 'No GitHub URL configured'}</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Fabric Name</th><th>Variants</th><th>Total Qty</th><th>Actions</th></tr></thead>
+    <tbody>${Object.keys(STOCK).map(name=>{
+      const items=STOCK[name];
+      const total=items.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0);
+      return `<tr><td><strong>${esc(name)}</strong></td><td>${items.length} variants</td><td class="gold">${total.toLocaleString('en-IN')}</td>
+      <td><button class="btn btn-sm btn-ghost" onclick="viewStockDetail('${name}')">View Details</button>
+      <button class="btn btn-sm btn-green" onclick="shareStockWA('${name}')">Share</button></td></tr>`;
+    }).join('') || '<tr><td colspan="4">No stock data. Sync from GitHub first.</td>'}</tbody></table></div></div>`;
+}
+
+function pageUsers(){
+  const pending = DB.users.filter(u=>u.status==='pending');
+  const active = DB.users.filter(u=>u.status==='approved' && u.role!=='admin');
+  const inactive = DB.users.filter(u=>u.status==='inactive');
+  const rowHtml = u => `<tr><td><strong>${esc(u.fullName)}</strong><br><span style="font-size:.7rem;color:var(--t3)">${esc(u.email||'—')}</span></td>
+    <td>${esc(u.mobile)}</td><td><span class="badge b-${u.role}">${u.role}</span></td>
+    <td><span class="sdot ${u.status==='approved'?'d-green':u.status==='pending'?'d-orange':'d-red'}"></span>${u.status}</td>
+    <td><div class="btn-row">${u.status==='pending'?`<button class="btn btn-sm btn-green" onclick="approveUser('${u.id}')">Approve</button><button class="btn btn-sm btn-red" onclick="rejectUser('${u.id}')">Reject</button>`:''}
+    ${u.status==='approved' && u.role!=='admin'?`<button class="btn btn-sm btn-red" onclick="deactivateUser('${u.id}')">Deactivate</button>`:''}
+    ${u.status==='inactive'?`<button class="btn btn-sm btn-green" onclick="activateUser('${u.id}')">Activate</button>`:''}</div></td></tr>`;
+  
+  return `<div class="page-head"><div class="page-title">User Management</div><div class="page-sub">${DB.users.length} total users</div></div>
+  <div class="card"><div class="card-head"><span class="card-title">⏳ Pending Approvals (${pending.length})</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>${pending.map(rowHtml).join('')||'<tr><td colspan="5">No pending approvals</td></tr>'}</tbody></table></div></div>
+  <div class="card"><div class="card-head"><span class="card-title">✓ Active Users</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>${active.map(rowHtml).join('')||'<tr><td colspan="5">No active users</td></tr>'}</tbody></table></div></div>
+  <div class="card"><div class="card-head"><span class="card-title">✗ Inactive Users</span></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>${inactive.map(rowHtml).join('')||'<tr><td colspan="5">No inactive users</td></tr>'}</tbody></table></div></div>`;
+}
+
+function pageGitHubStock(){
+  const lastSync = localStorage.getItem('ff_last_sync')||'Not yet';
+  return `<div class="page-head"><div class="page-title">🐙 GitHub Stock Sync</div>
+    <div class="page-sub">Load stock from your GitHub Gist JSON file</div></div>
+  <div class="card"><div class="card-head"><span class="card-title">GitHub Raw JSON URL</span></div>
+    <div class="info-box">Your JSON format: <code>{"Item Name":"BARBIE","Design / Color No":"1","Quantity":230,"Unit":"Rolls"}</code></div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap"><input id="gh-url-inp" class="set-inp" style="flex:1" 
+      placeholder="https://raw.githubusercontent.com/..." value="${esc(GH_URL)}" maxlength="600">
+      <button id="gh-fetch-btn" class="btn btn-gold" onclick="saveAndFetchGitHub()">🐙 Connect & Fetch</button>
+      ${GH_URL ? '<button class="btn btn-ghost" onclick="clearGitHubUrl()">✕ Disconnect</button>' : ''}</div>
+    <div id="gh-status" style="margin-top:10px;font-size:.78rem"></div>
+    <div style="margin-top:12px;padding:10px;background:var(--s2);border-radius:10px">
+      <span>📦 Stock loaded: <strong>${Object.keys(STOCK).length}</strong> fabric types · 
+      <strong>${Object.values(STOCK).reduce((a,b)=>a+b.length,0)}</strong> shades</span>
+      ${GH_URL ? `<span style="margin-left:15px">🕐 Last sync: ${lastSync}</span>` : ''}
+    </div>
+  </div>
+  <div class="card"><div class="card-head"><span class="card-title">📄 Sample JSON Format</span></div>
+    <pre style="background:var(--s2);padding:14px;border-radius:10px;font-size:.72rem;overflow-x:auto">[
+  {"Item Name": "BARBIE", "Design / Color No": "1", "Quantity": 230, "Unit": "Rolls"},
+  {"Item Name": "KOREAN", "Design / Color No": "1", "Quantity": 284, "Unit": "Rolls"}
+]</pre>
+    <div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="downloadSampleJSON()">⬇ Download Sample stock.json</button></div>
+  </div>`;
+}
+
+function pageSettings(){
+  return `<div class="page-head"><div class="page-title">Settings</div></div>
+  <div class="card"><div class="card-head"><span class="card-title">Theme</span></div>
+    <button class="btn btn-ghost" onclick="toggleTheme()">${isDark?'Switch to Light Mode':'Switch to Dark Mode'}</button>
+  </div>
+  <div class="card"><div class="card-head"><span class="card-title">Company Name</span></div>
+    <input id="co-inp" class="set-inp" value="${esc(DB.company)}" maxlength="80">
+    <button class="btn btn-gold" onclick="saveCompany()">Save</button>
+  </div>
+  <div class="card"><div class="card-head"><span class="card-title">Change Password</span></div>
+    <div class="modal-fld"><label>Current Password</label><input type="password" id="pwd-old" class="set-inp"></div>
+    <div class="modal-fld"><label>New Password (min 6)</label><input type="password" id="pwd-new" class="set-inp"></div>
+    <div class="modal-fld"><label>Confirm</label><input type="password" id="pwd-cf" class="set-inp"></div>
+    <button class="btn btn-gold" onclick="changePassword()">Update Password</button>
+    <div id="pwd-err" class="err-msg"></div>
+  </div>`;
+}
+
+function saveCompany(){
+  const v=san(document.getElementById('co-inp')?.value,80);
+  if(v){ DB.company=v; saveToLocal(); addLog('UPDATE_CO',v); showToast('Company updated'); renderApp(); }
+}
+
+async function changePassword(){
+  const op=document.getElementById('pwd-old')?.value;
+  const np=document.getElementById('pwd-new')?.value;
+  const cf=document.getElementById('pwd-cf')?.value;
+  const err=document.getElementById('pwd-err');
+  if(!op||!np){ err.textContent='Fill all fields'; err.classList.add('on'); return; }
+  if(np.length<6){ err.textContent='Minimum 6 characters'; err.classList.add('on'); return; }
+  if(np!==cf){ err.textContent='Passwords do not match'; err.classList.add('on'); return; }
+  const h=await hashPass(op,CU.salt);
+  if(h!==CU.password){ err.textContent='Wrong current password'; err.classList.add('on'); return; }
+  const salt=genSalt(), hash=await hashPass(np,salt);
+  CU.password=hash; CU.salt=salt;
+  const i=DB.users.findIndex(u=>u.id===CU.id); DB.users[i]=CU;
+  saveToLocal(); addLog('CHANGE_PWD','Password changed'); showToast('Password updated');
+  document.getElementById('pwd-old').value=''; document.getElementById('pwd-new').value=''; document.getElementById('pwd-cf').value='';
+  err.classList.remove('on');
+}
+
+// ========== MODALS & SHARING ==========
+function editFabric(id){
+  const f=DB.fabrics.find(f=>f.id===id);
+  if(!f) return;
+  const stockQty = getStockFor(f.name)?.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0) || 0;
+  openModal(`<div class="modal-box"><div class="modal-title">Edit ${esc(f.name)}</div>
+    <div class="modal-fld"><label>SN</label><input id="ed-sn" value="${esc(f.sn)}"></div>
+    <div class="modal-fld"><label>Name</label><input id="ed-name" value="${esc(f.name)}"></div>
+    <div class="modal-fld"><label>Category</label><input id="ed-cat" value="${esc(f.cat||'')}"></div>
+    <div class="modal-fld"><label>GSM</label><input id="ed-gsm" value="${esc(f.gsm||'')}"></div>
+    <div class="modal-fld"><label>Width</label><input id="ed-width" value="${esc(f.width||'')}"></div>
+    <div class="modal-fld"><label>Composition</label><input id="ed-comp" value="${esc(f.comp||'')}"></div>
+    <div class="modal-fld"><label>HF</label><input id="ed-hf" value="${esc(f.hf||'')}"></div>
+    <div class="modal-fld"><label>Rate</label><input id="ed-rate" value="${esc(f.rate||'')}"></div>
+    <div class="modal-fld"><label>Stock Qty</label><input type="number" id="ed-stock" value="${stockQty}"></div>
+    <div class="modal-foot"><button class="btn btn-gold" onclick="saveEditFabric('${id}')">Save</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
+}
+
+function saveEditFabric(id){
+  const sn=document.getElementById('ed-sn')?.value.trim();
+  const name=document.getElementById('ed-name')?.value.trim();
+  const stockQty=document.getElementById('ed-stock')?.value;
+  if(!sn||!name){ showToast('SN and Name required','err'); return; }
+  updateFabric(id,{sn,name,cat:document.getElementById('ed-cat')?.value,gsm:document.getElementById('ed-gsm')?.value,
+    width:document.getElementById('ed-width')?.value,comp:document.getElementById('ed-comp')?.value,
+    hf:document.getElementById('ed-hf')?.value,rate:document.getElementById('ed-rate')?.value});
+  if(stockQty !== undefined) updateStockQuantity(name, stockQty);
+  closeModal();
+}
+
+function showAddFabricModal(){
+  openModal(`<div class="modal-box"><div class="modal-title">Add Fabric</div>
+    <div class="modal-fld"><label>SN *</label><input id="add-sn" placeholder="e.g. 101"></div>
+    <div class="modal-fld"><label>Name *</label><input id="add-name" placeholder="Fabric name"></div>
+    <div class="modal-fld"><label>Category</label><input id="add-cat" placeholder="Category"></div>
+    <div class="modal-fld"><label>GSM</label><input id="add-gsm" placeholder="GSM"></div>
+    <div class="modal-fld"><label>Width</label><input id="add-width" placeholder="Width"></div>
+    <div class="modal-fld"><label>Composition</label><input id="add-comp" placeholder="Composition"></div>
+    <div class="modal-fld"><label>HF</label><input id="add-hf" placeholder="HF/Finish"></div>
+    <div class="modal-fld"><label>Rate</label><input id="add-rate" placeholder="Rate"></div>
+    <div class="modal-foot"><button class="btn btn-gold" onclick="submitAddFabric()">Create</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
+}
+
+function submitAddFabric(){
+  addFabric({sn:document.getElementById('add-sn')?.value.trim(),name:document.getElementById('add-name')?.value.trim(),
+    cat:document.getElementById('add-cat')?.value,gsm:document.getElementById('add-gsm')?.value,
+    width:document.getElementById('add-width')?.value,comp:document.getElementById('add-comp')?.value,
+    hf:document.getElementById('add-hf')?.value,rate:document.getElementById('add-rate')?.value});
+  closeModal();
+}
+
+function viewStockDetail(name){
+  const items=STOCK[name];
+  if(!items) return;
+  const total=items.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0);
+  openModal(`<div class="modal-box"><div class="modal-title">${esc(name)}</div>
+    <table style="width:100%"><thead><tr><th>Design</th><th>Qty</th><th>Unit</th></tr></thead>
+    <tbody>${items.map(i=>`<tr><td>${esc(i.design)}</td><td>${i.qty}</td><td>${esc(i.unit)}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td><strong>Total</strong></td><td><strong>${total}</strong></td><td>${esc(items[0]?.unit||'Rolls')}</td></tr></tfoot></table>
+    <div class="modal-foot"><button class="btn btn-green" onclick="shareStockWA('${name}');closeModal()">Share on WhatsApp</button>
+    <button class="btn btn-ghost" onclick="closeModal()">Close</button></div></div>`);
+}
+
+function shareFabricWA(id){
+  const f=DB.fabrics.find(f=>f.id===id);
+  if(!f) return;
+  const stock=getStockFor(f.name);
+  let msg=`${DB.company}\n\n${f.name}\n`;
+  if(f.rate) msg+=`Rate: ${f.rate}\n`;
+  if(stock?.length) msg+=`\nStock: ${stock.reduce((a,b)=>a+b.qty,0)} ${stock[0]?.unit||'Rolls'}`;
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+  addLog('WA_SHARE',f.name);
+}
+
+function shareStockWA(name){
+  const items=STOCK[name];
+  if(!items) return;
+  let msg=`${DB.company}\n\n${name}\n\nStock Available:\n`;
+  items.forEach(i=>msg+=`${i.design} - ${i.qty} ${i.unit}\n`);
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`,'_blank');
+  addLog('WA_SHARE_STOCK',name);
+}
+
+function downloadSampleJSON(){
+  const sample=[{"Item Name":"BARBIE","Design / Color No":"1","Quantity":230,"Unit":"Rolls","Comment":"K"},
+    {"Item Name":"KOREAN","Design / Color No":"1","Quantity":284,"Unit":"Rolls"}];
+  const blob=new Blob([JSON.stringify(sample,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='stock.json'; a.click();
+  showToast('Downloaded sample stock.json');
+}
+
+let modalCB=null;
+function openModal(html){
+  let ov=document.getElementById('modal-ov');
+  if(!ov){ ov=document.createElement('div'); ov.id='modal-ov'; ov.className='modal-bg'; ov.onclick=e=>{if(e.target===ov)closeModal();}; document.body.appendChild(ov); }
+  ov.innerHTML=html; ov.style.display='flex';
+}
+function closeModal(){ const ov=document.getElementById('modal-ov'); if(ov) ov.style.display='none'; }
+
+// ========== MAIN RENDER ==========
 function renderApp(){
   const root=document.getElementById('root');
   const sess=sessionStorage.getItem('ffs');
-  if(sess&&!CU){ try{const d=JSON.parse(sess);const f=DB.users.find(u=>u.id===d.id&&u.status==='approved');if(f)CU=f;}catch(e){} }
+  if(sess && !CU){ try{const d=JSON.parse(sess); const f=DB.users.find(u=>u.id===d.id && u.status==='approved'); if(f) CU=f;}catch(e){} }
+  
   if(!CU){
     root.innerHTML=`<div class="auth-bg"><div class="auth-card">
-      <div class="auth-brand">FabricFlow Pro</div>
-      <div class="auth-tagline">Smart Textile Inventory</div>
-      <div class="tab-strip">
-        <button class="tab-btn on" data-tab="login" onclick="switchAuthTab('login')">Login</button>
-        <button class="tab-btn" data-tab="register" onclick="switchAuthTab('register')">Register</button>
-      </div>
-      <div id="lf">
-        <div class="fld"><label>Mobile / Email</label><input id="l-id" placeholder="9999999999" maxlength="100" onkeydown="if(event.key==='Enter')doLogin()"></div>
-        <div class="fld"><label>Password</label><input type="password" id="l-pw" maxlength="128" onkeydown="if(event.key==='Enter')doLogin()"></div>
-        <div class="err-msg" id="l-err"></div>
-        <button class="auth-btn" onclick="doLogin()">Login</button>
-        <p style="margin-top:13px;font-size:.7rem;text-align:center">Default Admin: 9999999999 / admin123</p>
-      </div>
-      <div id="rf" style="display:none">
-        <div class="fld"><label>Full Name *</label><input id="r-name" maxlength="100"></div>
-        <div class="fld"><label>Mobile * (10 digits)</label><input id="r-mob" maxlength="10" inputmode="numeric"></div>
-        <div class="fld"><label>Email (optional)</label><input type="email" id="r-email" maxlength="100"></div>
-        <div class="fld"><label>Password * (min 6 chars)</label><input type="password" id="r-pw" maxlength="128"></div>
-        <div class="fld"><label>Register as</label>
-          <select id="r-role">
-            <option value="subadmin">Sub Admin (View Only)</option>
-            <option value="broker">Broker / Agent</option>
-            <option value="customer">Customer</option>
-          </select>
-        </div>
-        <div class="err-msg" id="r-err"></div>
-        <button class="auth-btn" onclick="doRegister()">Register</button>
-      </div>
+      <div class="auth-brand">FabricFlow Pro</div><div class="auth-tagline">Smart Textile Inventory</div>
+      <div class="tab-strip"><button class="tab-btn on" data-tab="login" onclick="switchAuthTab('login')">Login</button>
+        <button class="tab-btn" data-tab="register" onclick="switchAuthTab('register')">Register</button></div>
+      <div id="lf"><div class="fld"><label>Mobile / Email</label><input id="l-id" placeholder="9999999999"></div>
+        <div class="fld"><label>Password</label><input type="password" id="l-pw"></div>
+        <div class="err-msg" id="l-err"></div><button class="auth-btn" onclick="doLogin()">Login</button>
+        <p style="margin-top:13px;font-size:.7rem;text-align:center">Default Admin: 9999999999 / admin123</p></div>
+      <div id="rf" style="display:none"><div class="fld"><label>Full Name *</label><input id="r-name"></div>
+        <div class="fld"><label>Mobile *</label><input id="r-mob" maxlength="10"></div>
+        <div class="fld"><label>Email</label><input id="r-email"></div>
+        <div class="fld"><label>Password *</label><input type="password" id="r-pw"></div>
+        <div class="fld"><label>Register as</label><select id="r-role"><option value="subadmin">Sub Admin</option><option value="broker">Broker</option><option value="customer">Customer</option></select></div>
+        <div class="err-msg" id="r-err"></div><button class="auth-btn" onclick="doRegister()">Register</button></div>
     </div></div>`;
     return;
   }
   
-  // Simple sidebar and main content
+  const navItems = [
+    {id:'dashboard',icon:'⊞',label:'Dashboard',adminOnly:false},
+    {id:'catalog',icon:'◈',label:'Fabrics',adminOnly:false},
+    {id:'stock',icon:'▦',label:'Stock',adminOnly:false},
+    {id:'users',icon:'◉',label:'Users',adminOnly:CU?.role==='admin'},
+    {id:'github',icon:'🐙',label:'GitHub Sync',adminOnly:CU?.role==='admin'||CU?.role==='subadmin'},
+    {id:'settings',icon:'◎',label:'Settings',adminOnly:false}
+  ];
+  const visible = navItems.filter(n=>!n.adminOnly || (n.adminOnly===true && CU?.role==='admin') || (n.adminOnly==='subadmin' && CU?.role==='subadmin'));
   const pending=DB.users.filter(u=>u.status==='pending').length;
-  const nav = isAdminLike()
-    ? ['dashboard','catalog','stock','users','github','settings']
-    : ['catalog','stock'];
-  const navNames = {dashboard:'Dashboard',catalog:'Fabrics',stock:'Stock',users:'Users',github:'GitHub Stock',settings:'Settings'};
-  const navIcons = {dashboard:'⊞',catalog:'◈',stock:'▦',users:'◉',github:'🐙',settings:'◎'};
   
   let sidebar = `<div class="sidebar" id="sidebar"><div class="sb-head"><div class="sb-brand">FabricFlow Pro</div><span class="sb-co">${esc(DB.company)}</span></div><div class="sb-nav">`;
-  nav.forEach(p=>{
-    sidebar += `<div class="nav-item ${PAGE===p?'on':''}" onclick="goTo('${p}')"><span class="nav-icon">${navIcons[p]}</span>${navNames[p]}${p==='users'&&pending?`<span class="nav-badge">${pending}</span>`:''}</div>`;
+  visible.forEach(n=>{
+    sidebar += `<div class="nav-item ${PAGE===n.id?'on':''}" onclick="goTo('${n.id}')"><span class="nav-icon">${n.icon}</span>${n.label}${n.id==='users'&&pending?`<span class="nav-badge">${pending}</span>`:''}</div>`;
   });
   sidebar += `</div><div class="sb-foot"><button class="theme-pill" onclick="toggleTheme()">${isDark?'☀ Light Mode':'◑ Dark Mode'}</button>
     <div class="user-row"><div class="uavatar">${(CU?.fullName?.charAt(0)||'U').toUpperCase()}</div>
-    <div><div class="uname">${esc(CU?.fullName)}</div><div class="urole">${esc(ROLE_LABELS[CU?.role]||CU?.role)}</div></div>
+    <div><div class="uname">${esc(CU?.fullName)}</div><div class="urole">${CU?.role}</div></div>
     <button class="exit-btn" onclick="logout()">Exit</button></div></div></div>
     <div class="sb-overlay" id="sb-overlay" onclick="closeSidebar()"></div>
     <button class="hamburger" onclick="toggleSidebar()">☰</button>`;
     
   let mainHtml = '';
-  if(PAGE==='dashboard') mainHtml = `<div class="page-head"><div class="page-title">Dashboard</div><div class="page-sub">Welcome back, ${esc(CU.fullName)}</div></div>
-    <div class="kpi-row"><div class="kpi"><div class="kpi-label">Fabrics</div><div class="kpi-val gold">${DB.fabrics.length}</div></div>
-    <div class="kpi"><div class="kpi-label">Stock Types</div><div class="kpi-val grn">${Object.keys(STOCK).length}</div></div>
-    <div class="kpi"><div class="kpi-label">Total Stock</div><div class="kpi-val blu">${Object.values(STOCK).reduce((a,b)=>a+b.reduce((x,y)=>x+(typeof y.qty==='number'?y.qty:0),0),0).toLocaleString('en-IN')}</div></div>
-    <div class="kpi"><div class="kpi-label">Images</div><div class="kpi-val sky">${Object.values(IMGS).reduce((a,b)=>a+b.length,0)}</div></div>
-    <div class="kpi"><div class="kpi-label">Pending</div><div class="kpi-val ${pending>0?'rd':'grn'}">${pending}</div></div>
-    <div class="kpi"><div class="kpi-label">Users</div><div class="kpi-val prp">${DB.users.filter(u=>u.status==='approved'&&u.role!=='admin').length}</div></div></div>
-    <div class="card"><div class="card-head"><span class="card-title">GitHub Stock URL</span></div>
-    <div class="info-box">Current stock URL: <code>https://gist.githubusercontent.com/viphologram/12f3b69117bcdfdfd90214dec81293c4/raw/stock.json</code></div>
-    <div><strong>${Object.keys(STOCK).length}</strong> fabric types loaded · <strong>${Object.values(STOCK).reduce((a,b)=>a+b.length,0)}</strong> shade variants</div>
-    <button class="btn btn-sky btn-sm" style="margin-top:10px" onclick="goTo('github')">Go to GitHub Stock Page</button></div>`;
+  if(PAGE==='dashboard') mainHtml = pageDashboard();
+  else if(PAGE==='catalog') mainHtml = pageCatalog();
+  else if(PAGE==='stock') mainHtml = pageStock();
+  else if(PAGE==='users') mainHtml = pageUsers();
   else if(PAGE==='github') mainHtml = pageGitHubStock();
-  else mainHtml = `<div class="page-head"><div class="page-title">${navNames[PAGE]}</div></div><div class="card"><p>Feature coming soon. Visit GitHub Stock page to load your data.</p><button class="btn btn-gold" onclick="goTo('github')">Go to GitHub Stock</button></div>`;
+  else if(PAGE==='settings') mainHtml = pageSettings();
   
   root.innerHTML = sidebar + `<div class="main" id="main-content">${mainHtml}</div>`;
 }
@@ -838,11 +704,28 @@ window.doLogin = doLogin;
 window.doRegister = doRegister;
 window.saveAndFetchGitHub = saveAndFetchGitHub;
 window.clearGitHubUrl = clearGitHubUrl;
-window.autoSyncStock = autoSyncStock;
-window.downloadSampleStockJSON = downloadSampleStockJSON;
+window.downloadSampleJSON = downloadSampleJSON;
+window.approveUser = approveUser;
+window.rejectUser = rejectUser;
+window.deactivateUser = deactivateUser;
+window.activateUser = activateUser;
+window.updateStockQuantity = updateStockQuantity;
+window.deleteFabric = deleteFabric;
+window.editFabric = editFabric;
+window.showAddFabricModal = showAddFabricModal;
+window.submitAddFabric = submitAddFabric;
+window.saveEditFabric = saveEditFabric;
+window.viewStockDetail = viewStockDetail;
+window.shareFabricWA = shareFabricWA;
+window.shareStockWA = shareStockWA;
+window.closeModal = closeModal;
+window.changePassword = changePassword;
+window.saveCompany = saveCompany;
 
-// Start the app
-initDB().then(() => renderApp());
+// Initialize
+loadFromLocal();
+if(GH_URL) fetchGitHubStock().catch(console.warn);
+renderApp();
 </script>
 </body>
 </html>
