@@ -151,16 +151,16 @@ tr:hover td{background:var(--s2)}
   <div class="setup-card">
     <div class="logo-mark" style="width:48px;height:48px;background:linear-gradient(135deg,#2c5364,#3a7bd5);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px">📊</div>
     <h2>Admin Setup (One Time Only)</h2>
-    <p>Create your private cloud database. After this, all devices will sync automatically.</p>
+    <p>Create your private cloud database. After setup, every device goes directly to login.</p>
     <div class="info-box">
-      🔐 <strong>GitHub Token Setup:</strong><br>
-      1. Go to <a href="https://github.com/settings/tokens/new?scopes=gist&description=FabricFlow" target="_blank">Click here to create token</a><br>
-      2. Select ONLY <strong>gist</strong> scope<br>
-      3. Click "Generate token" and copy it<br>
-      <br>
-      ⚠️ Token must have ONLY 'gist' permission
+      🔐 <strong>GitHub Token (Classic - gist scope only):</strong><br>
+      1. Go to <a href="https://github.com/settings/tokens/new?scopes=gist&description=FabricFlow" target="_blank">github.com/settings/tokens</a><br>
+      2. Select "Generate new token (classic)"<br>
+      3. Select ONLY <strong>gist</strong> scope<br>
+      4. Set expiration to "No expiration"<br>
+      5. Copy the token (starts with ghp_)
     </div>
-    <label class="lbl" style="color:rgba(255,255,255,.7)">GitHub Token (gist scope only)</label>
+    <label class="lbl" style="color:rgba(255,255,255,.7)">GitHub Token (classic, gist scope)</label>
     <input class="setup-input" type="password" id="setupToken" placeholder="ghp_xxxx...">
     <label class="lbl" style="color:rgba(255,255,255,.7)">Admin Password</label>
     <input class="setup-input" type="password" id="setupAdminPw" placeholder="Create admin password (min 4 chars)">
@@ -195,7 +195,6 @@ const SK = {U:'ff_u',F:'ff_f',L:'ff_l',CO:'ff_co',TH:'ff_th',ST:'ff_st',IM:'ff_i
 let DB={users:[],fabrics:[],logs:[],company:'FabricFlow'};
 let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='', MASTER_TOKEN='', GIST_ID='';
 let _saveTimer=null;
-let _syncTimer=null;
 const AUTO_SYNC_INTERVAL = 2 * 60 * 1000;
 const GIST_FILE = 'fabricflow_db.json';
 
@@ -206,7 +205,6 @@ async function setupMasterDatabase(){
   if(!token){ showSetupAlert('GitHub token required','setup-error'); return; }
   if(!adminPw || adminPw.length<4){ showSetupAlert('Admin password must be at least 4 characters','setup-error'); return; }
   
-  // Validate token format
   if(!token.startsWith('ghp_')){ 
     showSetupAlert('Token must start with ghp_','setup-error'); 
     return;
@@ -216,17 +214,12 @@ async function setupMasterDatabase(){
   btn.disabled = true;
   btn.textContent = '⏳ Validating token...';
   
-  // Validate token by testing GitHub API
   try{
     const testRes = await fetch('https://api.github.com/user', {
-      headers: { 'Authorization': 'Bearer '+token, 'User-Agent': 'FabricFlow' }
+      headers: { 'Authorization': 'token '+token, 'User-Agent': 'FabricFlow' }
     });
     if(!testRes.ok){
-      let errMsg = 'Invalid GitHub token. ';
-      if(testRes.status === 401) errMsg += 'Token is invalid or expired.';
-      else if(testRes.status === 403) errMsg += 'Token lacks required permissions.';
-      else errMsg += 'Please check your token.';
-      showSetupAlert(errMsg, 'setup-error');
+      showSetupAlert('Invalid GitHub token. Create a new classic token with only gist scope.', 'setup-error');
       btn.disabled = false;
       btn.textContent = '🚀 Create Private Database';
       return;
@@ -275,7 +268,7 @@ async function setupMasterDatabase(){
     
     const createRes = await fetch('https://api.github.com/gists', {
       method: 'POST',
-      headers: { 'Authorization': 'Bearer '+token, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': 'token '+token, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         description: 'FabricFlow Private Database',
         public: false,
@@ -292,6 +285,7 @@ async function setupMasterDatabase(){
     GIST_ID = gist.id;
     MASTER_TOKEN = token;
     
+    // Save to localStorage
     localStorage.setItem(SK.GID, GIST_ID);
     localStorage.setItem('ff_master_token', MASTER_TOKEN);
     
@@ -326,11 +320,13 @@ async function loadFromPrivateGist(){
   
   try{
     const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
-      headers:{'Authorization':'Bearer '+tokenToUse,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'}
+      headers:{'Authorization':'token '+tokenToUse,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'}
     });
     
     if(r.status === 404){
-      console.warn('Gist not found');
+      console.warn('Gist not found - need to recreate');
+      localStorage.removeItem(SK.GID);
+      localStorage.removeItem('ff_master_token');
       return false;
     }
     
@@ -382,7 +378,7 @@ async function saveToPrivateGist(){
     
     const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
       method: 'PATCH',
-      headers: { 'Authorization': 'Bearer '+MASTER_TOKEN, 'Content-Type': 'application/json' },
+      headers: { 'Authorization': 'token '+MASTER_TOKEN, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         files: { [GIST_FILE]: { content: JSON.stringify(payload, null, 2) } }
       })
@@ -422,7 +418,7 @@ function addLog(action,details){
 }
 
 async function updateMasterToken(){
-  const newToken = prompt('Enter new GitHub Token (gist scope only):');
+  const newToken = prompt('Enter new GitHub Token (classic, gist scope only):');
   if(!newToken) return;
   
   if(!newToken.startsWith('ghp_')){
@@ -432,7 +428,7 @@ async function updateMasterToken(){
   
   try{
     const testRes = await fetch('https://api.github.com/user', {
-      headers: { 'Authorization': 'Bearer '+newToken, 'User-Agent': 'FabricFlow' }
+      headers: { 'Authorization': 'token '+newToken, 'User-Agent': 'FabricFlow' }
     });
     if(!testRes.ok){
       showToast('Invalid token!','err');
@@ -463,17 +459,21 @@ async function initDB(){
   GIST_ID = localStorage.getItem(SK.GID) || '';
   MASTER_TOKEN = localStorage.getItem('ff_master_token') || '';
   
+  // If no Gist ID, show setup screen
   if(!GIST_ID){
     document.getElementById('setupScreen').classList.add('show');
     return;
   }
   
+  // Load data from private Gist
   const loaded = await loadFromPrivateGist();
   if(!loaded){
+    // If load failed, show setup screen
     document.getElementById('setupScreen').classList.add('show');
     return;
   }
   
+  // Check for existing session
   const sess = sessionStorage.getItem('ffs');
   if(sess && !CU){ 
     try{
@@ -671,7 +671,7 @@ function renderLogTable(){
   const term=(document.getElementById('log-filter')?.value||'').toLowerCase();
   const logs=term?DB.logs.filter(l=>(l.action+l.details+l.userName).toLowerCase().includes(term)):DB.logs;
   if(!logs.length){ wrap.innerHTML='<div style="text-align:center;padding:32px">No logs found</div>'; return; }
-  wrap.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+  wrap.innerHTML=`<div class="tbl-wrap"></td><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
     <tbody>${logs.slice(0,200).map(l=>`<td><td style="white-space:nowrap">${esc(l.time)}</td><td>${esc(l.userName)}</td><td><span class="log-tag">${esc(l.action)}</span></td><td>${esc(l.details)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
@@ -1154,7 +1154,7 @@ function pageCatalog(){
     <button class="btn btn-sky btn-sm" onclick="downloadSampleCSV()">📥 Sample CSV</button>
     <button class="btn btn-ghost btn-sm" onclick="showManageCategories()">🏷 Categories</button>`:''}</div></div>
     <div class="search-wrap"><span class="search-ico">⌕</span><input id="cat-search" placeholder="Search fabric..." oninput="renderApp()"><button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('cat-search').value='';renderApp()">Reset</button></div>
-    <div class="tbl-wrap"><td><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th></td></thead>
+    <div class="tbl-wrap"><table><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th></tr></thead>
     <tbody>${filtered.map(f=>`<tr><td style="color:var(--t3)">${esc(f.sn)}</td>
       <td><strong style="color:var(--gold);cursor:pointer" onclick="viewFabric('${f.id}')">${esc(f.name)}</strong></td>
       <td>${esc(f.gsm||'—')}</td>
@@ -1165,7 +1165,7 @@ function pageCatalog(){
       <td class="btn-row">${admin?`<button class="btn btn-sm btn-ghost" onclick="editFabricModal('${f.id}')">Edit</button>
       <button class="btn btn-sm btn-red" onclick="deleteFabric('${f.id}')">Del</button>`:''}
       <button class="btn btn-sm btn-green" onclick="shareFabricWA('${f.id}')">Share</button></td>
-    </tr>`).join('') || '<tr class="empty-row"><td colspan="7">No fabrics</td>'}</tbody></table></div></div>`;
+    </tr>`).join('') || '<tr class="empty-row"><td colspan="7">No fabrics</tr>'}</tbody></table></div></div>`;
 }
 
 function pageStock(){
@@ -1219,8 +1219,8 @@ function pageStock(){
       <option value="">All Categories</option>${cats.map(x=>`<option value="${esc(x)}" ${catFilter===x?'selected':''}>${esc(x)}</option>`).join('')}
     </select>
     <button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('stk-search').value='';document.getElementById('stk-cat-filter').value='';renderApp()">Reset</button></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Fabric Name</th><th>Category</th><th>Variants</th>${adminView?'<th>Total Qty</th><th>Unit</th>':''}<th>Actions</th></td></thead>
-    <tbody>${tableBody || '<tr class="empty-row"><td colspan="6">No stock data. Sync from GitHub first.</td>'}</tbody></table></div></div>`;
+    <div class="tbl-wrap"><table><thead><tr><th>Fabric Name</th><th>Category</th><th>Variants</th>${adminView?'<th>Total Qty</th><th>Unit</th>':''}<th>Actions</th></tr></thead>
+    <tbody>${tableBody || '<tr class="empty-row"><td colspan="6">No stock data. Sync from GitHub first.</tr>'}</tbody></table></div></div>`;
 }
 
 function clearStock(){
@@ -1245,13 +1245,13 @@ function pageUsers(){
   return `<div class="page-head"><div class="page-title">User Management</div><div class="page-sub">${DB.users.length} total users</div></div>
   <div class="card"><div class="card-head"><span class="card-title">⏳ Pending Approvals (${pending.length})</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody>${pending.map(rowHtml).join('')||'<tr><td colspan="5">No pending approvals</td>'}</tbody></table></div></div>
+    <tbody>${pending.map(rowHtml).join('')||'<tr><td colspan="5">No pending approvals</tr>'}</tbody></table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">✓ Active Users</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody>${active.map(rowHtml).join('')||'<tr><td colspan="5">No active users</td>'}</tbody></table></div></div>
+    <tbody>${active.map(rowHtml).join('')||'<tr><td colspan="5">No active users</tr>'}</tbody></table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">✗ Inactive Users</span></div>
     <div class="tbl-wrap"><tr><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody>${inactive.map(rowHtml).join('')||'<tr><td colspan="5">No inactive users</td>'}</tbody></table></div></div>`;
+    <tbody>${inactive.map(rowHtml).join('')||'<tr><td colspan="5">No inactive users</tr>'}</tbody></table></div></div>`;
 }
 
 function pageGitHubStock(){
