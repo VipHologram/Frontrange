@@ -27,13 +27,6 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
 
-/* ========== CREDENTIALS - UPDATED BY SETUP ========== */
-// !! AUTO-GENERATED - DO NOT EDIT MANUALLY !!
-let HARDCODED_GIST_ID = '%%GIST_ID%%';
-let HARDCODED_TOKEN = '%%GITHUB_TOKEN%%';
-let HAS_CREDENTIALS = (HARDCODED_GIST_ID !== '%%GIST_ID%%' && HARDCODED_GIST_ID !== '');
-// ===================================================
-
 .setup-screen{display:none;min-height:100vh;background:linear-gradient(135deg,#0f1923,#1a2e40);align-items:center;justify-content:center;padding:20px}
 .setup-screen.show{display:flex}
 .setup-card{background:rgba(255,255,255,.06);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:36px;max-width:500px;width:100%}
@@ -152,7 +145,7 @@ tr:hover td{background:var(--s2)}
 <div id="root"></div>
 <div id="toast-root"></div>
 
-<!-- SETUP SCREEN - ONLY SHOWS FIRST TIME (WHEN NO CREDENTIALS HARDCODED) -->
+<!-- SETUP SCREEN - ONLY SHOWS FIRST TIME -->
 <div id="setupScreen" class="setup-screen">
   <div class="setup-card">
     <div class="logo-mark" style="width:48px;height:48px;background:linear-gradient(135deg,#2c5364,#3a7bd5);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px">📊</div>
@@ -166,17 +159,13 @@ tr:hover td{background:var(--s2)}
       4. Set expiration to "No expiration"<br>
       5. Copy the token (starts with ghp_)<br>
       <br>
-      ⚠️ You also need your GitHub username and repository name.
+      📦 Token will be stored on npoint.io (free) and shared with all devices.
     </div>
     <label class="lbl" style="color:rgba(255,255,255,.7)">GitHub Token (classic, gist scope)</label>
     <input class="setup-input" type="password" id="setupToken" placeholder="ghp_xxxx...">
-    <label class="lbl" style="color:rgba(255,255,255,.7)">GitHub Username</label>
-    <input class="setup-input" type="text" id="setupUsername" placeholder="your-github-username">
-    <label class="lbl" style="color:rgba(255,255,255,.7)">Repository Name</label>
-    <input class="setup-input" type="text" id="setupRepo" placeholder="frtstockmanager">
     <label class="lbl" style="color:rgba(255,255,255,.7)">Admin Password</label>
     <input class="setup-input" type="password" id="setupAdminPw" placeholder="Create admin password (min 4 chars)">
-    <button id="setupBtn" class="setup-btn" onclick="setupAndUpdateFile()">🚀 Create & Save to File →</button>
+    <button id="setupBtn" class="setup-btn" onclick="setupDatabase()">🚀 Create Database →</button>
     <div id="setupAlert" class="setup-alert"></div>
   </div>
 </div>
@@ -204,21 +193,20 @@ const canEdit = () => CU?.role === 'admin';
 const isAdminOrSubAdmin = () => ['admin','subadmin'].includes(CU?.role);
 
 const GIST_FILE = 'fabricflow_db.json';
+const NPIO_BASE = 'https://api.npoint.io';
 
 let DB={users:[],fabrics:[],logs:[],company:'FabricFlow'};
 let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='';
-let MASTER_TOKEN = HAS_CREDENTIALS ? HARDCODED_TOKEN : '';
-let GIST_ID = HAS_CREDENTIALS ? HARDCODED_GIST_ID : '';
+let MASTER_TOKEN = '';
+let GIST_ID = '';
+let NPIO_ID = localStorage.getItem('ff_npio_id') || '';
 
-// ========== SETUP THAT UPDATES THE HTML FILE ==========
-async function setupAndUpdateFile(){
+// ========== SETUP ==========
+async function setupDatabase(){
   const token = document.getElementById('setupToken').value.trim();
-  const username = document.getElementById('setupUsername').value.trim();
-  const repo = document.getElementById('setupRepo').value.trim();
   const adminPw = document.getElementById('setupAdminPw').value;
   
   if(!token){ showSetupAlert('GitHub token required','setup-error'); return; }
-  if(!username || !repo){ showSetupAlert('GitHub username and repo required','setup-error'); return; }
   if(!adminPw || adminPw.length<4){ showSetupAlert('Admin password must be at least 4 characters','setup-error'); return; }
   
   if(!token.startsWith('ghp_')){ 
@@ -231,19 +219,20 @@ async function setupAndUpdateFile(){
   btn.textContent = '⏳ Validating token...';
   
   try{
+    // Validate token
     const testRes = await fetch('https://api.github.com/user', {
       headers: { 'Authorization': 'token '+token, 'User-Agent': 'FabricFlow' }
     });
     if(!testRes.ok){
       showSetupAlert('Invalid GitHub token. Create a new classic token with only gist scope.', 'setup-error');
       btn.disabled = false;
-      btn.textContent = '🚀 Create & Save to File →';
+      btn.textContent = '🚀 Create Database →';
       return;
     }
   } catch(e){
     showSetupAlert('Network error: '+e.message, 'setup-error');
     btn.disabled = false;
-    btn.textContent = '🚀 Create & Save to File →';
+    btn.textContent = '🚀 Create Database →';
     return;
   }
   
@@ -281,6 +270,7 @@ async function setupAndUpdateFile(){
       created: new Date().toISOString()
     };
     
+    // Create private Gist
     const createRes = await fetch('https://api.github.com/gists', {
       method: 'POST',
       headers: { 'Authorization': 'token '+token, 'Content-Type': 'application/json' },
@@ -300,60 +290,39 @@ async function setupAndUpdateFile(){
     GIST_ID = gist.id;
     MASTER_TOKEN = token;
     
-    btn.textContent = '⏳ Updating HTML file...';
+    btn.textContent = '⏳ Storing token on npoint.io...';
     
-    // Update the HTML file on GitHub
-    const fileUrl = `https://api.github.com/repos/${username}/${repo}/contents/index.html`;
+    // Store token and Gist ID on npoint.io
+    const npointData = {
+      gistId: GIST_ID,
+      token: MASTER_TOKEN,
+      createdAt: new Date().toISOString()
+    };
     
-    // Get current file
-    let currentSha = '';
-    let currentContent = '';
-    try{
-      const getRes = await fetch(fileUrl, {
-        headers: { 'Authorization': 'token '+token, 'Accept': 'application/vnd.github.v3+json' }
-      });
-      if(getRes.ok){
-        const fileData = await getRes.json();
-        currentSha = fileData.sha;
-        currentContent = atob(fileData.content);
-      }
-    } catch(e){}
-    
-    // Get current HTML content
-    let htmlContent = currentContent;
-    if(!htmlContent){
-      const pageRes = await fetch(window.location.href);
-      htmlContent = await pageRes.text();
-    }
-    
-    // Replace placeholders with actual credentials
-    const newHtmlContent = htmlContent
-      .replace(/let HARDCODED_GIST_ID = '%%GIST_ID%%';/, `let HARDCODED_GIST_ID = '${GIST_ID}';`)
-      .replace(/let HARDCODED_TOKEN = '%%GITHUB_TOKEN%%';/, `let HARDCODED_TOKEN = '${token}';`);
-    
-    // Push to GitHub
-    const putRes = await fetch(fileUrl, {
-      method: 'PUT',
-      headers: { 'Authorization': 'token '+token, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: 'Setup complete - credentials saved',
-        content: btoa(unescape(encodeURIComponent(newHtmlContent))),
-        sha: currentSha || undefined
-      })
+    // Create npoint.io document
+    const npointRes = await fetch(NPIO_BASE + '/documents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(npointData)
     });
     
-    if(!putRes.ok){
-      const err = await putRes.json();
-      throw new Error(err.message || 'Failed to update file');
-    }
+    if(!npointRes.ok) throw new Error('Failed to create npoint document');
+    const npointDoc = await npointRes.json();
+    NPIO_ID = npointDoc.id;
     
-    showSetupAlert('✅ Setup complete! Netlify will redeploy in 1-2 minutes. Page will refresh...', 'setup-success');
-    setTimeout(()=> window.location.reload(), 3000);
+    // Save npoint ID to localStorage for this device
+    localStorage.setItem('ff_npio_id', NPIO_ID);
+    
+    // Also save locally
+    DB = initialData;
+    
+    showSetupAlert('✅ Database created! Token stored on npoint.io. Redirecting to login...', 'setup-success');
+    setTimeout(()=> window.location.reload(), 1500);
     
   } catch(e){
     showSetupAlert('❌ Error: '+e.message, 'setup-error');
     btn.disabled = false;
-    btn.textContent = '🚀 Create & Save to File →';
+    btn.textContent = '🚀 Create Database →';
   }
 }
 
@@ -362,6 +331,31 @@ function showSetupAlert(msg, cls){
   el.textContent = msg;
   el.className = `setup-alert ${cls}`;
   el.style.display = 'block';
+}
+
+// ========== LOAD CREDENTIALS FROM NPOINT.IO ==========
+async function loadCredentialsFromNpoint(){
+  // First check if we have npoint ID in localStorage
+  if(!NPIO_ID){
+    // No npoint ID - need setup
+    return false;
+  }
+  
+  try{
+    const res = await fetch(`${NPIO_BASE}/${NPIO_ID}`);
+    if(!res.ok) throw new Error('Failed to fetch from npoint');
+    const data = await res.json();
+    
+    if(data.gistId && data.token){
+      GIST_ID = data.gistId;
+      MASTER_TOKEN = data.token;
+      return true;
+    }
+    return false;
+  } catch(e){
+    console.warn('Failed to load from npoint:', e);
+    return false;
+  }
 }
 
 // ========== DATABASE OPERATIONS ==========
@@ -421,10 +415,12 @@ async function saveToGist(){
   }
 }
 
+let _saveTimer = null;
 function scheduleSave(){
   if(_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(async()=>{
     await saveToGist();
+    // Backup to localStorage
     localStorage.setItem('ff_users', JSON.stringify(DB.users));
     localStorage.setItem('ff_fabrics', JSON.stringify(DB.fabrics));
     localStorage.setItem('ff_logs', JSON.stringify(DB.logs));
@@ -447,8 +443,11 @@ async function initDB(){
   applyTheme();
   GH_URL = localStorage.getItem('ff_gh_url') || '';
   
-  // If no hardcoded credentials, show setup screen
-  if(!HAS_CREDENTIALS){
+  // Load credentials from npoint.io
+  const hasCredentials = await loadCredentialsFromNpoint();
+  
+  if(!hasCredentials){
+    // No credentials - show setup screen
     document.getElementById('setupScreen').classList.add('show');
     return;
   }
@@ -456,7 +455,6 @@ async function initDB(){
   // Load data from Gist
   const loaded = await loadFromGist();
   if(!loaded){
-    // If load failed, show error but try to continue with local cache
     console.warn('Could not load from Gist');
   }
   
@@ -667,7 +665,7 @@ function renderLogTable(){
   const logs=term?DB.logs.filter(l=>(l.action+l.details+l.userName).toLowerCase().includes(term)):DB.logs;
   if(!logs.length){ wrap.innerHTML='<div style="text-align:center;padding:32px">No logs found</div>'; return; }
   wrap.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
-    <tbody>${logs.slice(0,200).map(l=>`<td><td style="white-space:nowrap">${esc(l.time)}</td><td>${esc(l.userName)}</td><td><span class="log-tag">${esc(l.action)}</span></td><td>${esc(l.details)}</td></tr>`).join('')}</tbody></table></div>`;
+    <tbody>${logs.slice(0,200).map(l=>`<tr><td style="white-space:nowrap">${esc(l.time)}</td><td>${esc(l.userName)}</td><td><span class="log-tag">${esc(l.action)}</span></td><td>${esc(l.details)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
 // ========== CATEGORY MANAGEMENT ==========
@@ -1015,8 +1013,8 @@ function viewFabric(id){
     ${stock?.length?`<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;margin-top:12px">
       <div>Stock — ${esc(f.name)}</div>
       <table style="width:100%"><thead><tr><th>Design</th><th>Qty</th><th>Unit</th><th>Comment</th></tr></thead>
-      <tbody>${stock.map(i=>`<tr><td style="font-weight:700">${esc(i.design)}</td><td class="gold">${i.qty}</td>}<strong>${i.qty}</strong></td>}<strong>${i.qty}</strong></td>}<strong>${i.qty}</strong></td></tbody>
-      <tfoot><tr>}<strong>Total</strong></td>}<strong>${stock.reduce((a,b)=>a+b.qty,0)}</strong></td>}<strong>${esc(stock[0]?.unit||'Rolls')}</strong></td>}<strong>${esc(stock[0]?.unit||'Rolls')}</strong></td>} </tfoot></table>
+      <tbody>${stock.map(i=>`<tr><td style="font-weight:700">${esc(i.design)}</td><td class="gold">${i.qty}</td>}<strong>${i.qty}</strong></td>}<strong>${i.qty}</strong></td>} </tbody>
+      <tfoot><tr><strong>Total</strong> <strong>${stock.reduce((a,b)=>a+b.qty,0)}</strong> <strong>${esc(stock[0]?.unit||'Rolls')}</strong> </tfoot></table>
     </div>`:''}
     <div class="modal-foot"><button class="btn btn-green" onclick="shareFabricWA('${f.id}');closeModal()">Share on WhatsApp</button>
     ${canEdit()?`<button class="btn btn-gold" onclick="closeModal();editFabricModal('${f.id}')">Edit</button>`:''}
@@ -1148,7 +1146,7 @@ function pageCatalog(){
     <button class="btn btn-sky btn-sm" onclick="downloadSampleCSV()">📥 Sample CSV</button>
     <button class="btn btn-ghost btn-sm" onclick="showManageCategories()">🏷 Categories</button>`:''}</div></div>
     <div class="search-wrap"><span class="search-ico">⌕</span><input id="cat-search" placeholder="Search fabric..." oninput="renderApp()"><button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('cat-search').value='';renderApp()">Reset</button></div>
-    <div class="tbl-wrap"><tr><thead></tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th></tr></thead>
+    <div class="tbl-wrap"></table><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th></tr></thead>
     <tbody>${filtered.map(f=>`<tr><td style="color:var(--t3)">${esc(f.sn)}</td>
       <td><strong style="color:var(--gold);cursor:pointer" onclick="viewFabric('${f.id}')">${esc(f.name)}</strong></td>
       <td>${esc(f.gsm||'—')}</td>
@@ -1159,7 +1157,7 @@ function pageCatalog(){
       <td class="btn-row">${admin?`<button class="btn btn-sm btn-ghost" onclick="editFabricModal('${f.id}')">Edit</button>
       <button class="btn btn-sm btn-red" onclick="deleteFabric('${f.id}')">Del</button>`:''}
       <button class="btn btn-sm btn-green" onclick="shareFabricWA('${f.id}')">Share</button></td>
-    </tr>`).join('') || '<tr class="empty-row"><td colspan="7">No fabrics</td>'}</tbody></table></div></div>`;
+    </tr>`).join('') || '<tr class="empty-row"><td colspan="7">No fabrics</td></tr>'}</tbody></table></div></div>`;
 }
 
 function pageStock(){
@@ -1270,9 +1268,9 @@ function pageGitHubStock(){
 ]</pre>
     <div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="downloadSampleStockJSON()">⬇ Download Sample stock.json</button></div>
   </div>
-  <div class="card"><div class="card-head"><span class="card-title">🔗 Database Status</span></div>
-    <div class="info-box">✅ Data stored in <strong>PRIVATE GitHub Gist</strong></div>
-    <div><strong>Credentials are hardcoded in this file.</strong> No manual entry needed on any device.</div>
+  <div class="card"><div class="card-head"><span class="card-title">🔗 Cloud Token Storage</span></div>
+    <div class="info-box">✅ GitHub token is stored on <strong>npoint.io</strong> (free cloud storage). All devices share the same token.</div>
+    <div><strong>npoint ID:</strong> <code>${NPIO_ID}</code></div>
   </div>`;
 }
 
@@ -1404,7 +1402,6 @@ window.addImageRow = addImageRow;
 initDB();
 
 let _autoSyncTimer = null;
-let _saveTimer = null;
 const AUTO_SYNC_INTERVAL = 2 * 60 * 1000;
 </script>
 </body>
