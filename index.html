@@ -9,6 +9,7 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#08090d;--surface:#0f1118;--s2:#161b26;--border:#252d3d;--gold:#e8a020;--green:#27c98a;--red:#f04d4d;--blue:#4b8cf7;--sky:#22c4e8;--text:#eef2f8;--t2:#8896ae}
+[data-theme="light"]{--bg:#f0f2f7;--surface:#ffffff;--s2:#e8eaf0;--border:#d0d5e0;--gold:#b87010;--green:#16a34a;--red:#dc2626;--blue:#2563eb;--sky:#0284c7;--text:#0f1118;--t2:#4b5563}
 body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 /* LOADING SCREEN */
 .app-loader{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:18px}
@@ -165,6 +166,7 @@ let DB={users:[],fabrics:[],logs:[],company:'FabricFlow'};
 let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='';
 let MASTER_TOKEN = '';
 let GIST_ID = '';
+let _hasCredentials = false;
 let _autoSyncTimer = null;
 let _saveTimer = null;
 const AUTO_SYNC_INTERVAL = 2 * 60 * 1000;
@@ -307,10 +309,10 @@ async function initDB(){
   loadFromLocalStorage();
 
   // Step 2: Load credentials from npoint.io (token never in source code)
-  const hasCredentials = await loadCredentialsFromNpoint();
+  _hasCredentials = await loadCredentialsFromNpoint();
 
   // Step 3: Load latest data from Gist
-  if(hasCredentials){
+  if(_hasCredentials){
     await loadFromGist();
   }
 
@@ -337,10 +339,31 @@ async function initDB(){
   if(loader) loader.remove();
 
   renderApp();
+  applyTheme(); // Re-apply after DOM is fully rendered
   startAutoSync();
+  // Poll for DB updates every 30s while admin is viewing Users page
+  setInterval(async()=>{
+    if(CU?.role==='admin' && PAGE==='users' && _hasCredentials){
+      await loadFromGist();
+      renderApp();
+    }
+  }, 30000);
 }
 
-function applyTheme(){ document.documentElement.setAttribute('data-theme', isDark?'dark':'light'); }
+function applyTheme(){
+  const t = isDark ? 'dark' : 'light';
+  // Set on both <html> and <body> — covers all CSS variable cascade scenarios
+  document.documentElement.setAttribute('data-theme', t);
+  document.body.setAttribute('data-theme', t);
+  // Also force background/color directly on body for environments that ignore CSS vars on html
+  if(!isDark){
+    document.body.style.background = '#f0f2f7';
+    document.body.style.color = '#0f1118';
+  } else {
+    document.body.style.background = '#08090d';
+    document.body.style.color = '#eef2f8';
+  }
+}
 function toggleTheme(){ isDark=!isDark; localStorage.setItem('ff_theme', isDark?'dark':'light'); applyTheme(); renderApp(); }
 
 // ========== AUTH ==========
@@ -377,8 +400,10 @@ async function doRegister(){
   if(DB.users.find(u=>u.mobile===mob)){ err.textContent='Mobile already registered'; err.classList.add('on'); return; }
   const salt=genSalt(), hash=await hashPass(pw,salt);
   DB.users.push({id:uid(),fullName:name,mobile:mob,email:email||'',password:hash,salt,role,status:'pending',createdAt:new Date().toLocaleString()});
-  scheduleSave();
   addLog('REGISTER',`${name} as ${role}`);
+  // Immediately save to Gist so admin sees new registration right away
+  scheduleSave();
+  saveToGist().catch(()=>{});
   showToast('Registered! Awaiting admin approval.');
   switchAuthTab('login');
   renderApp();
@@ -509,6 +534,13 @@ function exportLogsCSV(){
   const csv='\uFEFF'+['Time,User,Action,Details',...rows].join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=`logs_${Date.now()}.csv`; a.click();
   showToast(`Exported ${DB.logs.length} log entries`);
+}
+
+async function refreshUsersFromGist(){
+  showToast('Refreshing user list...');
+  await loadFromGist();
+  renderApp();
+  showToast('User list refreshed');
 }
 
 function clearLogs(){
@@ -1032,7 +1064,8 @@ function pageDashboard(){
 }
 
 function pageCatalog(){
-  const search = document.getElementById('cat-search')?.value?.toLowerCase() || '';
+  // Read from DOM if available, fallback to empty (value restored after render)
+  const search = (document.getElementById('cat-search')?.value ?? '').toLowerCase();
   const filtered = DB.fabrics.filter(f=>f.name.toLowerCase().includes(search) || (f.sn||'').toLowerCase().includes(search));
   const admin = canEdit();
   const adminView = isAdminOrSubAdmin();
@@ -1046,7 +1079,7 @@ function pageCatalog(){
       <button class="btn btn-ghost btn-sm" onclick="exportFabricsCSV()">⬇ Export</button>
       <button class="btn btn-ghost btn-sm" onclick="showManageCategories()">🏷 Categories</button>
     `:''}</div></div>
-    <div class="search-wrap"><span class="search-ico">⌕</span><input id="cat-search" placeholder="Search fabric name or SN..." oninput="renderApp()">
+    <div class="search-wrap"><span class="search-ico">⌕</span><input id="cat-search" placeholder="Search fabric name or SN..." oninput="renderApp()" autocomplete="off" spellcheck="false">
     <button class="btn btn-sm btn-ghost" onclick="document.getElementById('cat-search').value='';renderApp()">Reset</button></div>
     <div class="tbl-wrap"><table><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th></tr></thead>
     <tbody>${filtered.map(f=>`<tr>
@@ -1070,8 +1103,8 @@ function pageCatalog(){
 }
 
 function pageStock(){
-  const term = document.getElementById('stk-search')?.value?.toLowerCase() || '';
-  const catFilter = document.getElementById('stk-cat-filter')?.value || '';
+  const term = (document.getElementById('stk-search')?.value ?? '').toLowerCase();
+  const catFilter = document.getElementById('stk-cat-filter')?.value ?? '';
   const filtered = Object.keys(STOCK).filter(k=>{
     const matchS = !term || k.toLowerCase().includes(term);
     const fab = DB.fabrics.find(f=>f.name.toUpperCase()===k.toUpperCase());
@@ -1162,7 +1195,12 @@ function pageUsers(){
       ${u.status==='inactive'?`<button class="btn btn-sm btn-green" onclick="activateUser('${u.id}')">Activate</button>`:''}
     </td>
   </tr>`;
-  return `<div class="page-head"><div class="page-title">User Management</div><div class="page-sub">${DB.users.length} total users</div></div>
+  return `<div class="page-head">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div><div class="page-title">User Management</div><div class="page-sub">${DB.users.length} total users</div></div>
+      <button class="btn btn-sky btn-sm" onclick="refreshUsersFromGist()">⟳ Refresh</button>
+    </div>
+  </div>
   <div class="card"><div class="card-head"><span class="card-title">⏳ Pending Approvals (${pending.length})</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Registered</th><th>Action</th></tr></thead>
     <tbody>${pending.map(rowHtml).join('')||'<tr class="empty-row"><td colspan="6">No pending approvals</td></tr>'}</tbody></table></div></div>
@@ -1248,6 +1286,15 @@ function renderApp(){
   const root=document.getElementById('root');
   if(!root) return;
 
+  // Save search/filter state before wiping DOM
+  const _saved = {
+    catSearch: document.getElementById('cat-search')?.value || '',
+    stkSearch: document.getElementById('stk-search')?.value || '',
+    stkCat:    document.getElementById('stk-cat-filter')?.value || '',
+    logFilter: document.getElementById('log-filter')?.value || '',
+    _focus:    document.activeElement?.id || ''
+  };
+
   if(!CU){
     root.innerHTML=`<div class="auth-bg"><div class="auth-card">
       <div class="auth-brand">FabricFlow Pro</div>
@@ -1317,6 +1364,30 @@ function renderApp(){
   else if(PAGE==='settings') mainHtml = pageSettings();
 
   root.innerHTML = sidebar + `<div class="main" id="main-content">${mainHtml}</div>`;
+
+  // Restore search input values and focus
+  const catEl = document.getElementById('cat-search');
+  const stkEl = document.getElementById('stk-search');
+  const stkCatEl = document.getElementById('stk-cat-filter');
+  const logEl = document.getElementById('log-filter');
+  if(catEl && _saved.catSearch){ catEl.value = _saved.catSearch; }
+  if(stkEl && _saved.stkSearch){ stkEl.value = _saved.stkSearch; }
+  if(stkCatEl && _saved.stkCat){ stkCatEl.value = _saved.stkCat; }
+  if(logEl && _saved.logFilter){ logEl.value = _saved.logFilter; }
+
+  // Restore focus to previously active input
+  if(_saved._focus){
+    const focusEl = document.getElementById(_saved._focus);
+    if(focusEl && typeof focusEl.focus === 'function'){
+      focusEl.focus();
+      // Restore cursor to end of input
+      if(focusEl.value !== undefined){
+        const len = focusEl.value.length;
+        try{ focusEl.setSelectionRange(len, len); } catch(e){}
+      }
+    }
+  }
+
   setTimeout(renderLogTable, 50);
 }
 
@@ -1345,6 +1416,7 @@ window.addCategoryRow=addCategoryRow; window.saveCategories=saveCategories;
 window.assignCategoryToStock=assignCategoryToStock; window.saveStockCategory=saveStockCategory;
 window.exportFabricsCSV=exportFabricsCSV; window.exportLogsCSV=exportLogsCSV;
 window.clearLogs=clearLogs; window.renderLogTable=renderLogTable;
+window.refreshUsersFromGist=refreshUsersFromGist;
 window.showResetModal=showResetModal; window.doReset=doReset;
 window.addImageRow=addImageRow; window.confirmModal=confirmModal;
 
