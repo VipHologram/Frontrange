@@ -198,45 +198,66 @@ function fetchWithTimeout(url, options={}, ms=8000){
 
 // ========== LOAD CREDENTIALS — AUTO BOOTSTRAP ==========
 // Order of attempts:
-// 1. localStorage (fastest — already visited this device)
-// 2. Gist raw URL (public, no auth — reads app_token field saved by admin)
-// 3. Fail → show setup screen (admin only, one time)
+// 1. localStorage (fastest — set on previous visit)
+// 2. npoint.io (your config store — always works)
+// 3. Gist raw URL (if admin saved app_token into Gist)
+// 4. Fail → show one-time admin setup screen
+const NPIO_URL = 'https://api.npoint.io/ea7b9700322ea640a188';
+
 async function loadCredentialsFromNpoint(){
   GIST_ID = localStorage.getItem('ff_gist_id') || GIST_ID_DEFAULT;
 
-  // Attempt 1: localStorage token (instant)
+  // ── Attempt 1: localStorage (instant, works offline) ──
   const lsToken = localStorage.getItem('ff_gh_token');
-  if(lsToken){ 
-    MASTER_TOKEN = lsToken; 
+  if(lsToken){
+    MASTER_TOKEN = lsToken;
     console.log('Token from localStorage');
-    return true; 
+    return true;
   }
 
-  // Attempt 2: Try reading app_token from Gist raw URL (no auth needed for public gist)
-  // If admin saved token into gist previously, all devices can bootstrap from here
-  try{
-    const urls = [
-      GIST_RAW_URL,
-      'https://corsproxy.io/?' + encodeURIComponent(GIST_RAW_URL),
-      'https://api.allorigins.win/raw?url=' + encodeURIComponent(GIST_RAW_URL)
-    ];
-    for(const url of urls){
-      try{
-        const r = await fetchWithTimeout(url, {cache:'no-cache'}, 6000);
-        if(!r.ok) continue;
-        const data = await r.json();
-        if(data.app_token){
-          MASTER_TOKEN = data.app_token;
-          // Cache in localStorage for next time
-          localStorage.setItem('ff_gh_token', MASTER_TOKEN);
-          console.log('Token bootstrapped from Gist raw URL');
-          return true;
-        }
-      } catch(e){ /* try next */ }
-    }
-  } catch(e){ /* fall through */ }
+  // ── Attempt 2: npoint.io (your config store, CORS-enabled) ──
+  const npointUrls = [
+    NPIO_URL,
+    'https://corsproxy.io/?' + encodeURIComponent(NPIO_URL),
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(NPIO_URL)
+  ];
+  for(const url of npointUrls){
+    try{
+      const r = await fetchWithTimeout(url, {cache:'no-cache'}, 6000);
+      if(!r.ok) continue;
+      const data = await r.json();
+      if(data.token && data.gistId){
+        MASTER_TOKEN = data.token;
+        GIST_ID = data.gistId;
+        localStorage.setItem('ff_gh_token', MASTER_TOKEN);
+        localStorage.setItem('ff_gist_id', GIST_ID);
+        console.log('Token from npoint.io');
+        return true;
+      }
+    } catch(e){ /* try next */ }
+  }
 
-  console.warn('No token found — admin setup required');
+  // ── Attempt 3: Gist raw URL (if app_token was saved in Gist by admin) ──
+  const rawUrls = [
+    GIST_RAW_URL,
+    'https://corsproxy.io/?' + encodeURIComponent(GIST_RAW_URL),
+    'https://api.allorigins.win/raw?url=' + encodeURIComponent(GIST_RAW_URL)
+  ];
+  for(const url of rawUrls){
+    try{
+      const r = await fetchWithTimeout(url, {cache:'no-cache'}, 5000);
+      if(!r.ok) continue;
+      const data = await r.json();
+      if(data.app_token){
+        MASTER_TOKEN = data.app_token;
+        localStorage.setItem('ff_gh_token', MASTER_TOKEN);
+        console.log('Token from Gist raw URL');
+        return true;
+      }
+    } catch(e){ /* try next */ }
+  }
+
+  console.warn('All credential sources failed — showing admin setup');
   return false;
 }
 
@@ -247,12 +268,13 @@ async function loadFromGist(){
     const r = await fetchWithTimeout('https://api.github.com/gists/'+GIST_ID, {
       headers:{'Authorization':'token '+MASTER_TOKEN,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'}
     }, 10000);
+    if(r.status===401) throw new Error('401: Token invalid or expired');
+    if(r.status===404) throw new Error('404: Gist ID not found');
     if(!r.ok) throw new Error('HTTP '+r.status);
     const gist = await r.json();
     const file = gist.files && gist.files[GIST_FILE];
     if(file && file.content){
       const data = JSON.parse(file.content);
-      // If gist has token stored, cache it locally
       if(data.app_token && !localStorage.getItem('ff_gh_token')){
         localStorage.setItem('ff_gh_token', data.app_token);
       }
@@ -263,12 +285,14 @@ async function loadFromGist(){
       STOCK      = data.stock   || {};
       IMGS       = data.imgs    || {};
       GH_URL     = data.gh_url  || '';
-      return true;
+      return 'loaded';
     }
+    // Gist exists and token is valid, but our file doesn't exist yet
+    if(gist.id) return 'empty';
     return false;
   } catch(e){
     console.warn('Gist load failed:', e.message);
-    return false;
+    return e.message; // return error string so caller can show it
   }
 }
 
@@ -352,7 +376,9 @@ async function initDB(){
 
   // Step 3: Load latest data from Gist
   if(_hasCredentials){
-    await loadFromGist();
+    const r = await loadFromGist();
+    if(r === 'loaded') console.log('DB loaded from Gist');
+    else if(r === 'empty') console.log('Gist empty — fresh DB');
   }
 
   // Step 4: Ensure admin exists ONLY if truly no users at all
@@ -392,8 +418,8 @@ async function initDB(){
   // Poll for DB updates every 30s while admin is viewing Users page
   setInterval(async()=>{
     if(CU?.role==='admin' && PAGE==='users' && _hasCredentials){
-      await loadFromGist();
-      renderApp();
+      const r = await loadFromGist();
+      if(r === 'loaded') renderApp();
     }
   }, 30000);
 }
@@ -433,36 +459,56 @@ async function doSetupToken(){
   }
   
   if(btn){ btn.disabled=true; btn.textContent='Connecting...'; }
-  
-  // Test the token by fetching the Gist
+
   MASTER_TOKEN = token;
   GIST_ID = gistId;
-  
-  const ok = await loadFromGist();
-  
-  if(ok){
-    // Save to localStorage for this device
+
+  const result = await loadFromGist();
+
+  if(result === 'loaded' || result === 'empty'){
+    // Token valid! Save to localStorage
     localStorage.setItem('ff_gh_token', token);
     localStorage.setItem('ff_gist_id', gistId);
     _hasCredentials = true;
 
-    // Ensure admin exists
-    const hasAdmin = DB.users.some(u => u.role === 'admin');
-    if(!hasAdmin){
-      const salt=genSalt();
-      const hash=await hashPass('admin123',salt);
-      DB.users.push({id:uid(),fullName:'Master Admin',mobile:'9999999999',email:'admin@fabricflow.com',password:hash,salt,role:'admin',status:'approved',createdAt:new Date().toLocaleString()});
+    if(result === 'empty'){
+      // First time — Gist exists but our file not created yet
+      // Create fresh admin and write file to Gist now
+      if(btn) btn.textContent = 'Creating database...';
     }
 
-    // Save token INTO the Gist so all other devices can auto-bootstrap
-    await saveToGist();
-    
-    showToast('✓ Connected! Token saved to cloud — other devices will auto-configure.');
-    addLog('SETUP', 'Token configured and saved to Gist');
+    // Ensure admin exists
+    if(!DB.users.some(u => u.role === 'admin')){
+      const salt=genSalt();
+      const hash=await hashPass('admin123',salt);
+      DB.users.push({id:uid(),fullName:'Master Admin',mobile:'9999999999',
+        email:'admin@fabricflow.com',password:hash,salt,role:'admin',
+        status:'approved',createdAt:new Date().toLocaleString()});
+    }
+
+    // Save token + all data INTO Gist (creates file if new, updates if existing)
+    if(btn) btn.textContent = 'Saving to cloud...';
+    const saved = await saveToGist();
+    if(!saved){
+      if(err){ err.textContent='Connected but save failed — check token has "gist" write scope'; err.classList.add('on'); }
+      if(btn){ btn.disabled=false; btn.textContent='🔌 Connect & Continue'; }
+      return;
+    }
+
+    const msg = result==='empty' ? '✓ New database created!' : '✓ Connected! '+DB.users.length+' users loaded.';
+    showToast(msg + ' All devices will auto-configure.');
+    addLog('SETUP', 'Token configured, Gist '+(result==='empty'?'created':'connected'));
     renderApp();
+
   } else {
+    // result is an error string
     MASTER_TOKEN = ''; GIST_ID = '';
-    if(err){ err.textContent='Connection failed — check token has "gist" scope and Gist ID is correct'; err.classList.add('on'); }
+    const hint = typeof result==='string' && result.includes('401')
+      ? 'Invalid token — make sure it has "gist" scope'
+      : typeof result==='string' && result.includes('404')
+      ? 'Gist ID not found — check the ID is correct'
+      : 'Connection failed: '+(result||'unknown error');
+    if(err){ err.textContent=hint; err.classList.add('on'); }
     if(btn){ btn.disabled=false; btn.textContent='🔌 Connect & Continue'; }
   }
 }
@@ -637,10 +683,11 @@ function exportLogsCSV(){
 }
 
 async function refreshUsersFromGist(){
-  showToast('Refreshing user list...');
-  await loadFromGist();
+  showToast('Refreshing...');
+  const r = await loadFromGist();
   renderApp();
-  showToast('User list refreshed');
+  if(r === 'loaded') showToast('✓ Users refreshed: '+DB.users.length+' users');
+  else showToast('Refresh failed: '+(typeof r==='string'?r:'no data'), 'err');
 }
 
 function clearLogs(){
@@ -1108,14 +1155,14 @@ async function saveGitHubToken(){
 async function testGistConnection(){
   if(!MASTER_TOKEN){ showToast('No token set','err'); return; }
   showToast('Testing connection...');
-  const ok = await loadFromGist();
+  const r = await loadFromGist();
   const el = document.getElementById('token-status');
-  if(ok){
+  if(r === 'loaded' || r === 'empty'){
     showToast('✓ Connection successful!');
     if(el) el.innerHTML = '<span style="color:var(--green)">✓ Connected · '+DB.users.length+' users · '+DB.fabrics.length+' fabrics</span>';
   } else {
-    showToast('Connection failed — check token permissions','err');
-    if(el) el.innerHTML = '<span style="color:var(--red)">✗ Connection failed</span>';
+    showToast('Connection failed: '+(typeof r==='string'?r:'unknown'),'err');
+    if(el) el.innerHTML = '<span style="color:var(--red)">✗ '+(typeof r==='string'?r:'Connection failed')+'</span>';
   }
 }
 
