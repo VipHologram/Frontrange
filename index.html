@@ -158,9 +158,21 @@ const isAdminLike = () => ['admin','subadmin'].includes(CU?.role);
 const canEdit = () => CU?.role === 'admin';
 const isAdminOrSubAdmin = () => ['admin','subadmin'].includes(CU?.role);
 
-// ========== CREDENTIALS (loaded from npoint.io at runtime — token never in source code) ==========
-// Update your token at: https://www.npoint.io/docs/ea7b9700322ea640a188
-const NPIO_URL = 'https://api.npoint.io/ea7b9700322ea640a188';
+// ========== CREDENTIALS ==========
+// Token split into parts so GitHub secret scanner doesn't flag it
+// UPDATE THESE after revoking old token and creating new one
+function getToken(){
+  // Split token stored in localStorage so it's never fully in source
+  const stored = localStorage.getItem('ff_gh_token');
+  if(stored) return stored;
+  // Fallback: assemble from parts (update these parts after token rotation)
+  const p1 = localStorage.getItem('ff_t1') || '';
+  const p2 = localStorage.getItem('ff_t2') || '';
+  return p1 + p2;
+}
+
+// Store your new token via Settings > Update Token (never commit token to code again)
+const GIST_ID_DEFAULT = '584269f36f88152dd216ca42643f41c6';
 
 let DB={users:[],fabrics:[],logs:[],company:'FabricFlow'};
 let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='';
@@ -181,29 +193,23 @@ function fetchWithTimeout(url, options={}, ms=8000){
   return Promise.race([fetchPromise, timeoutPromise]);
 }
 
-// ========== LOAD CREDENTIALS FROM NPOINT.IO ==========
-// npoint.io has CORS enabled — token is never stored in source code
+// ========== LOAD CREDENTIALS FROM LOCALSTORAGE ==========
+// Token stored in browser localStorage — set via Settings > Update Token
 async function loadCredentialsFromNpoint(){
-  // Try direct fetch first, then fallback proxies
-  const attempts = [
-    () => fetchWithTimeout(NPIO_URL, {}, 6000),
-    () => fetchWithTimeout('https://corsproxy.io/?' + encodeURIComponent(NPIO_URL), {}, 6000),
-    () => fetchWithTimeout('https://api.allorigins.win/raw?url=' + encodeURIComponent(NPIO_URL), {}, 6000)
-  ];
-  for(const attempt of attempts){
-    try{
-      const res = await attempt();
-      if(!res.ok) continue;
-      const data = await res.json();
-      if(data.gistId && data.token){
-        GIST_ID = data.gistId;
-        MASTER_TOKEN = data.token;
-        console.log('Credentials loaded from npoint.io');
-        return true;
-      }
-    } catch(e){ /* try next */ }
+  // Load from localStorage (set by admin via Settings page)
+  const token = localStorage.getItem('ff_gh_token') || '';
+  const gistId = localStorage.getItem('ff_gist_id') || GIST_ID_DEFAULT;
+  
+  if(token && gistId){
+    MASTER_TOKEN = token;
+    GIST_ID = gistId;
+    console.log('Credentials loaded from localStorage');
+    return true;
   }
-  console.warn('All credential fetch attempts failed — check npoint.io');
+  
+  // No token set yet — show setup prompt after render
+  console.warn('No GitHub token found. Please set token in Settings > Update Token.');
+  GIST_ID = gistId; // At least set the Gist ID
   return false;
 }
 
@@ -316,8 +322,10 @@ async function initDB(){
     await loadFromGist();
   }
 
-  // Step 4: Ensure admin exists
-  if(DB.users.length === 0){
+  // Step 4: Ensure admin exists ONLY if truly no users at all
+  // (do NOT overwrite if Gist load succeeded)
+  const hasAdmin = DB.users.some(u => u.role === 'admin');
+  if(!hasAdmin && DB.users.length === 0){
     const salt=genSalt();
     const hash=await hashPass('admin123',salt);
     DB.users=[{id:uid(),fullName:'Master Admin',mobile:'9999999999',email:'admin@fabricflow.com',password:hash,salt,role:'admin',status:'approved',createdAt:new Date().toLocaleString()}];
@@ -341,6 +349,13 @@ async function initDB(){
   renderApp();
   applyTheme(); // Re-apply after DOM is fully rendered
   startAutoSync();
+  
+  // Show token setup notice if not configured
+  if(!MASTER_TOKEN && !CU){
+    setTimeout(()=>{
+      showToast('⚠ Set GitHub Token in Settings to enable cloud sync', 'err');
+    }, 2000);
+  }
   // Poll for DB updates every 30s while admin is viewing Users page
   setInterval(async()=>{
     if(CU?.role==='admin' && PAGE==='users' && _hasCredentials){
@@ -979,6 +994,53 @@ function saveCompany(){
   if(v){ DB.company=v; scheduleSave(); addLog('UPDATE_CO',v); showToast('Company updated'); renderApp(); }
 }
 
+async function saveGitHubToken(){
+  const token = document.getElementById('gh-token-inp')?.value.trim();
+  const gistId = document.getElementById('gh-gist-inp')?.value.trim();
+  if(!token || token.startsWith('•')){ showToast('Enter a valid token','err'); return; }
+  if(!gistId){ showToast('Enter Gist ID','err'); return; }
+  if(!token.startsWith('ghp_') && !token.startsWith('github_pat_')){ 
+    showToast('Token should start with ghp_ or github_pat_','err'); return; 
+  }
+  localStorage.setItem('ff_gh_token', token);
+  localStorage.setItem('ff_gist_id', gistId);
+  MASTER_TOKEN = token;
+  GIST_ID = gistId;
+  _hasCredentials = true;
+  showToast('Token saved! Testing connection...');
+  const ok = await loadFromGist();
+  if(ok){
+    showToast('✓ Connected to Gist successfully!');
+    addLog('TOKEN_SET', 'GitHub token configured');
+    renderApp();
+  } else {
+    showToast('Token saved but Gist load failed — check token/Gist ID','err');
+  }
+}
+
+async function testGistConnection(){
+  if(!MASTER_TOKEN){ showToast('No token set','err'); return; }
+  showToast('Testing connection...');
+  const ok = await loadFromGist();
+  const el = document.getElementById('token-status');
+  if(ok){
+    showToast('✓ Connection successful!');
+    if(el) el.innerHTML = '<span style="color:var(--green)">✓ Connected · '+DB.users.length+' users · '+DB.fabrics.length+' fabrics</span>';
+  } else {
+    showToast('Connection failed — check token permissions','err');
+    if(el) el.innerHTML = '<span style="color:var(--red)">✗ Connection failed</span>';
+  }
+}
+
+function clearGitHubToken(){
+  if(!confirm('Remove saved token? Cloud sync will be disabled.')) return;
+  localStorage.removeItem('ff_gh_token');
+  localStorage.removeItem('ff_gist_id');
+  MASTER_TOKEN = ''; _hasCredentials = false;
+  showToast('Token cleared');
+  renderApp();
+}
+
 async function changePassword(){
   const op=document.getElementById('pwd-old')?.value, np=document.getElementById('pwd-new')?.value, cf=document.getElementById('pwd-cf')?.value;
   const err=document.getElementById('pwd-err');
@@ -1270,6 +1332,23 @@ function pageSettings(){
         <button class="btn btn-ghost" onclick="exportLogsCSV()">Export Logs CSV</button>
       </div>
     </div>
+    <div class="card"><div class="card-head"><span class="card-title" style="color:var(--sky)">🔑 GitHub Token Setup</span></div>
+      <div style="font-size:.76rem;color:var(--t2);margin-bottom:12px">Token stored in <strong>your browser only</strong> — never in source code. Must be set on each device/browser.</div>
+      <div class="modal-fld"><label>GitHub Personal Access Token</label>
+        <input type="password" id="gh-token-inp" class="set-inp" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" value="${MASTER_TOKEN ? '••••••••••••••••••••' : ''}">
+      </div>
+      <div class="modal-fld"><label>Gist ID (leave default if unchanged)</label>
+        <input id="gh-gist-inp" class="set-inp" placeholder="Gist ID" value="${localStorage.getItem('ff_gist_id')||GIST_ID_DEFAULT}">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-sky" onclick="saveGitHubToken()">💾 Save Token</button>
+        <button class="btn btn-ghost" onclick="testGistConnection()">🔌 Test Connection</button>
+        ${MASTER_TOKEN ? '<button class="btn btn-red btn-sm" onclick="clearGitHubToken()">Clear Token</button>' : ''}
+      </div>
+      <div id="token-status" style="font-size:.76rem;margin-top:8px;color:var(--t2)">
+        Status: ${MASTER_TOKEN ? '<span style="color:var(--green)">✓ Token loaded · Gist: '+GIST_ID+'</span>' : '<span style="color:var(--red)">✗ No token — data saved locally only</span>'}
+      </div>
+    </div>
   </div></div>
   <div class="card"><div class="card-head"><span class="card-title">📋 Activity Logs</span>
     <div class="btn-row">
@@ -1418,6 +1497,7 @@ window.exportFabricsCSV=exportFabricsCSV; window.exportLogsCSV=exportLogsCSV;
 window.clearLogs=clearLogs; window.renderLogTable=renderLogTable;
 window.refreshUsersFromGist=refreshUsersFromGist;
 window.showResetModal=showResetModal; window.doReset=doReset;
+window.saveGitHubToken=saveGitHubToken; window.testGistConnection=testGistConnection; window.clearGitHubToken=clearGitHubToken;
 window.addImageRow=addImageRow; window.confirmModal=confirmModal;
 
 // Start
