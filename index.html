@@ -7,6 +7,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <style>
+*{margin:0;padding:0;box-sizing:border-box}
 :root{
   --bg:#08090d;--surface:#0f1118;--s2:#161b26;--s3:#1e2535;
   --border:#252d3d;--border2:#2e3a52;
@@ -173,6 +174,11 @@ tr:hover td{background:var(--s2)}
 <script>
 'use strict';
 
+// ============================================================
+// YOUR NPOINT.IO ID - ALREADY CONFIGURED!
+// ============================================================
+let NPIO_ID = 'ea7b9700322ea640a188';
+
 const esc = s => { if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
 const san = (s, n=200) => s ? String(s).trim().slice(0,n) : '';
 const uid = () => crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36)+Math.random().toString(36).substr(2));
@@ -199,9 +205,139 @@ let DB={users:[],fabrics:[],logs:[],company:'FabricFlow'};
 let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='';
 let MASTER_TOKEN = '';
 let GIST_ID = '';
-let NPIO_ID = localStorage.getItem('ff_npio_id') || '';
 
-// ========== SETUP ==========
+// ========== LOAD/UPDATE CREDENTIALS FROM NPOINT.IO ==========
+async function loadCredentialsFromNpoint(){
+  if(!NPIO_ID) return false;
+  
+  try{
+    const res = await fetch(`${NPIO_BASE}/${NPIO_ID}`);
+    if(!res.ok) throw new Error('Failed to fetch from npoint');
+    const data = await res.json();
+    
+    if(data.gistId && data.token){
+      GIST_ID = data.gistId;
+      MASTER_TOKEN = data.token;
+      return true;
+    }
+    return false;
+  } catch(e){
+    console.warn('Failed to load from npoint:', e);
+    return false;
+  }
+}
+
+// Admin function to update npoint ID
+async function updateNpointId(){
+  if(!isAdmin()){
+    showToast('Only admin can update npoint ID','err');
+    return;
+  }
+  
+  const newId = prompt('Enter new npoint.io document ID:', NPIO_ID);
+  if(!newId || newId === NPIO_ID) return;
+  
+  // Test the new ID
+  try{
+    const testRes = await fetch(`${NPIO_BASE}/${newId}`);
+    if(!testRes.ok) throw new Error('Invalid npoint ID');
+    const data = await testRes.json();
+    if(!data.gistId || !data.token) throw new Error('Invalid data in npoint document');
+    
+    NPIO_ID = newId;
+    localStorage.setItem('ff_npio_id', NPIO_ID);
+    
+    // Reload credentials
+    await loadCredentialsFromNpoint();
+    await loadFromGist();
+    
+    showToast('✅ npoint ID updated! Database reconnected.','ok');
+    addLog('NPIO_UPDATED', `npoint ID changed to ${newId}`);
+    renderApp();
+  } catch(e){
+    showToast('Invalid npoint ID: '+e.message, 'err');
+  }
+}
+
+// ========== DATABASE OPERATIONS ==========
+async function loadFromGist(){
+  if(!MASTER_TOKEN || !GIST_ID) return false;
+  try{
+    const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
+      headers:{'Authorization':'token '+MASTER_TOKEN,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'}
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const gist = await r.json();
+    const file = gist.files && gist.files[GIST_FILE];
+    if(file && file.content){
+      const data = JSON.parse(file.content);
+      DB.users = data.users || [];
+      DB.fabrics = data.fabrics || [];
+      DB.logs = data.logs || [];
+      DB.company = data.company || 'FabricFlow';
+      STOCK = data.stock || {};
+      IMGS = data.imgs || {};
+      GH_URL = data.gh_url || '';
+      return true;
+    }
+    return false;
+  } catch(e){
+    console.warn('Load failed:', e);
+    return false;
+  }
+}
+
+async function saveToGist(){
+  if(!MASTER_TOKEN || !GIST_ID) return false;
+  try{
+    const payload = {
+      users: DB.users,
+      fabrics: DB.fabrics,
+      logs: DB.logs.slice(0,300),
+      company: DB.company,
+      stock: STOCK,
+      imgs: IMGS,
+      gh_url: GH_URL,
+      last_saved: new Date().toISOString()
+    };
+    
+    const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'token '+MASTER_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        files: { [GIST_FILE]: { content: JSON.stringify(payload, null, 2) } }
+      })
+    });
+    if(!r.ok) throw new Error('Save failed');
+    return true;
+  } catch(e){
+    console.warn('Save failed:', e);
+    return false;
+  }
+}
+
+let _saveTimer = null;
+function scheduleSave(){
+  if(_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async()=>{
+    await saveToGist();
+    localStorage.setItem('ff_users', JSON.stringify(DB.users));
+    localStorage.setItem('ff_fabrics', JSON.stringify(DB.fabrics));
+    localStorage.setItem('ff_logs', JSON.stringify(DB.logs));
+    localStorage.setItem('ff_company', DB.company);
+    localStorage.setItem('ff_stock', JSON.stringify(STOCK));
+    localStorage.setItem('ff_imgs', JSON.stringify(IMGS));
+    localStorage.setItem('ff_gh_url', GH_URL);
+  }, 2000);
+}
+
+function addLog(action,details){
+  DB.logs.unshift({id:uid(),userId:CU?.id||'sys',userName:CU?.fullName||'System',action,details,time:new Date().toLocaleString()});
+  if(DB.logs.length>500) DB.logs=DB.logs.slice(0,500);
+  scheduleSave();
+}
+
+// ========== SETUP (First time only) ==========
 async function setupDatabase(){
   const token = document.getElementById('setupToken').value.trim();
   const adminPw = document.getElementById('setupAdminPw').value;
@@ -219,7 +355,6 @@ async function setupDatabase(){
   btn.textContent = '⏳ Validating token...';
   
   try{
-    // Validate token
     const testRes = await fetch('https://api.github.com/user', {
       headers: { 'Authorization': 'token '+token, 'User-Agent': 'FabricFlow' }
     });
@@ -296,10 +431,10 @@ async function setupDatabase(){
     const npointData = {
       gistId: GIST_ID,
       token: MASTER_TOKEN,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
-    // Create npoint.io document
     const npointRes = await fetch(NPIO_BASE + '/documents', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -333,110 +468,6 @@ function showSetupAlert(msg, cls){
   el.style.display = 'block';
 }
 
-// ========== LOAD CREDENTIALS FROM NPOINT.IO ==========
-async function loadCredentialsFromNpoint(){
-  // First check if we have npoint ID in localStorage
-  if(!NPIO_ID){
-    // No npoint ID - need setup
-    return false;
-  }
-  
-  try{
-    const res = await fetch(`${NPIO_BASE}/${NPIO_ID}`);
-    if(!res.ok) throw new Error('Failed to fetch from npoint');
-    const data = await res.json();
-    
-    if(data.gistId && data.token){
-      GIST_ID = data.gistId;
-      MASTER_TOKEN = data.token;
-      return true;
-    }
-    return false;
-  } catch(e){
-    console.warn('Failed to load from npoint:', e);
-    return false;
-  }
-}
-
-// ========== DATABASE OPERATIONS ==========
-async function loadFromGist(){
-  if(!MASTER_TOKEN || !GIST_ID) return false;
-  try{
-    const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
-      headers:{'Authorization':'token '+MASTER_TOKEN,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'}
-    });
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const gist = await r.json();
-    const file = gist.files && gist.files[GIST_FILE];
-    if(file && file.content){
-      const data = JSON.parse(file.content);
-      DB.users = data.users || [];
-      DB.fabrics = data.fabrics || [];
-      DB.logs = data.logs || [];
-      DB.company = data.company || 'FabricFlow';
-      STOCK = data.stock || {};
-      IMGS = data.imgs || {};
-      GH_URL = data.gh_url || '';
-      return true;
-    }
-    return false;
-  } catch(e){
-    console.warn('Load failed:', e);
-    return false;
-  }
-}
-
-async function saveToGist(){
-  if(!MASTER_TOKEN || !GIST_ID) return false;
-  try{
-    const payload = {
-      users: DB.users,
-      fabrics: DB.fabrics,
-      logs: DB.logs.slice(0,300),
-      company: DB.company,
-      stock: STOCK,
-      imgs: IMGS,
-      gh_url: GH_URL,
-      last_saved: new Date().toISOString()
-    };
-    
-    const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
-      method: 'PATCH',
-      headers: { 'Authorization': 'token '+MASTER_TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        files: { [GIST_FILE]: { content: JSON.stringify(payload, null, 2) } }
-      })
-    });
-    if(!r.ok) throw new Error('Save failed');
-    return true;
-  } catch(e){
-    console.warn('Save failed:', e);
-    return false;
-  }
-}
-
-let _saveTimer = null;
-function scheduleSave(){
-  if(_saveTimer) clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(async()=>{
-    await saveToGist();
-    // Backup to localStorage
-    localStorage.setItem('ff_users', JSON.stringify(DB.users));
-    localStorage.setItem('ff_fabrics', JSON.stringify(DB.fabrics));
-    localStorage.setItem('ff_logs', JSON.stringify(DB.logs));
-    localStorage.setItem('ff_company', DB.company);
-    localStorage.setItem('ff_stock', JSON.stringify(STOCK));
-    localStorage.setItem('ff_imgs', JSON.stringify(IMGS));
-    localStorage.setItem('ff_gh_url', GH_URL);
-  }, 2000);
-}
-
-function addLog(action,details){
-  DB.logs.unshift({id:uid(),userId:CU?.id||'sys',userName:CU?.fullName||'System',action,details,time:new Date().toLocaleString()});
-  if(DB.logs.length>500) DB.logs=DB.logs.slice(0,500);
-  scheduleSave();
-}
-
 // ========== INIT ==========
 async function initDB(){
   isDark = localStorage.getItem('ff_theme') !== 'light';
@@ -447,7 +478,7 @@ async function initDB(){
   const hasCredentials = await loadCredentialsFromNpoint();
   
   if(!hasCredentials){
-    // No credentials - show setup screen
+    // Show setup screen - first time user
     document.getElementById('setupScreen').classList.add('show');
     return;
   }
@@ -455,15 +486,7 @@ async function initDB(){
   // Load data from Gist
   const loaded = await loadFromGist();
   if(!loaded){
-    console.warn('Could not load from Gist');
-  }
-  
-  // Ensure admin exists
-  if(DB.users.length === 0){
-    const salt=genSalt();
-    const hash=await hashPass('admin123',salt);
-    DB.users=[{id:uid(),fullName:'Master Admin',mobile:'9999999999',email:'admin@fabricflow.com',password:hash,salt,role:'admin',status:'approved',createdAt:new Date().toLocaleString()}];
-    scheduleSave();
+    showToast('Could not load database. Please check your connection.', 'err');
   }
   
   // Check for existing session
@@ -665,7 +688,7 @@ function renderLogTable(){
   const logs=term?DB.logs.filter(l=>(l.action+l.details+l.userName).toLowerCase().includes(term)):DB.logs;
   if(!logs.length){ wrap.innerHTML='<div style="text-align:center;padding:32px">No logs found</div>'; return; }
   wrap.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
-    <tbody>${logs.slice(0,200).map(l=>`<tr><td style="white-space:nowrap">${esc(l.time)}</td><td>${esc(l.userName)}</td><td><span class="log-tag">${esc(l.action)}</span></td><td>${esc(l.details)}</td></tr>`).join('')}</tbody></table></div>`;
+    <tbody>${logs.slice(0,200).map(l=>`</td><td style="white-space:nowrap">${esc(l.time)}</td><td>${esc(l.userName)}</td><td><span class="log-tag">${esc(l.action)}</span></td><td>${esc(l.details)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
 // ========== CATEGORY MANAGEMENT ==========
@@ -983,7 +1006,7 @@ function viewStockModal(name){
   const total=items.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0);
   const adminView = isAdminOrSubAdmin();
   openModal(`<div class="modal-box"><div class="modal-title">${esc(name)}</div>
-    ${adminView ? `<table style="width:100%"><thead><tr><th>Design</th><th>Qty</th><th>Unit</th><th>Comment</th></tr></thead>
+    ${adminView ? `<table style="width:100%"><thead><tr><th>Design</th><th>Qty</th><th>Unit</th><th>Comment</th><tr></thead>
     <tbody>${items.map(i=>`<tr><td style="font-weight:700">${esc(i.design)}</td><td class="gold">${i.qty}</td><td>${esc(i.unit)}</td><td>${esc(i.comment||'—')}</td></tr>`).join('')}</tbody>
     <tfoot><tr><td><strong>Total</strong></td><td><strong>${total}</strong></td><td>${esc(items[0]?.unit||'Rolls')}</td><td></td></tr></tfoot></table>`
     : `<div style="background:var(--s2);border-radius:12px;padding:16px"><div>Available Shades:</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">${items.map(i=>`<span style="background:var(--s3);padding:5px 12px;border-radius:20px">${esc(i.design)}</span>`).join('')}</div></div>`}
@@ -1013,7 +1036,7 @@ function viewFabric(id){
     ${stock?.length?`<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;margin-top:12px">
       <div>Stock — ${esc(f.name)}</div>
       <table style="width:100%"><thead><tr><th>Design</th><th>Qty</th><th>Unit</th><th>Comment</th></tr></thead>
-      <tbody>${stock.map(i=>`<tr><td style="font-weight:700">${esc(i.design)}</td><td class="gold">${i.qty}</td>}<strong>${i.qty}</strong></td>}<strong>${i.qty}</strong></td>} </tbody>
+      <tbody>${stock.map(i=>`<tr><td style="font-weight:700">${esc(i.design)}</td><td class="gold">${i.qty}</td>}<strong>${i.qty}</strong></td>} </tbody>
       <tfoot><tr><strong>Total</strong> <strong>${stock.reduce((a,b)=>a+b.qty,0)}</strong> <strong>${esc(stock[0]?.unit||'Rolls')}</strong> </tfoot></table>
     </div>`:''}
     <div class="modal-foot"><button class="btn btn-green" onclick="shareFabricWA('${f.id}');closeModal()">Share on WhatsApp</button>
@@ -1146,7 +1169,7 @@ function pageCatalog(){
     <button class="btn btn-sky btn-sm" onclick="downloadSampleCSV()">📥 Sample CSV</button>
     <button class="btn btn-ghost btn-sm" onclick="showManageCategories()">🏷 Categories</button>`:''}</div></div>
     <div class="search-wrap"><span class="search-ico">⌕</span><input id="cat-search" placeholder="Search fabric..." oninput="renderApp()"><button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('cat-search').value='';renderApp()">Reset</button></div>
-    <div class="tbl-wrap"></table><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th></tr></thead>
+    <div class="tbl-wrap"><table><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th></tr></thead>
     <tbody>${filtered.map(f=>`<tr><td style="color:var(--t3)">${esc(f.sn)}</td>
       <td><strong style="color:var(--gold);cursor:pointer" onclick="viewFabric('${f.id}')">${esc(f.name)}</strong></td>
       <td>${esc(f.gsm||'—')}</td>
@@ -1157,7 +1180,7 @@ function pageCatalog(){
       <td class="btn-row">${admin?`<button class="btn btn-sm btn-ghost" onclick="editFabricModal('${f.id}')">Edit</button>
       <button class="btn btn-sm btn-red" onclick="deleteFabric('${f.id}')">Del</button>`:''}
       <button class="btn btn-sm btn-green" onclick="shareFabricWA('${f.id}')">Share</button></td>
-    </tr>`).join('') || '<tr class="empty-row"><td colspan="7">No fabrics</td></tr>'}</tbody></table></div></div>`;
+    </tr>`).join('') || '<tr class="empty-row"><td colspan="7">No fabrics</td>'}</tbody></table></div></div>`;
 }
 
 function pageStock(){
@@ -1212,7 +1235,8 @@ function pageStock(){
     </select>
     <button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('stk-search').value='';document.getElementById('stk-cat-filter').value='';renderApp()">Reset</button></div>
     <div class="tbl-wrap"><table><thead><tr><th>Fabric Name</th><th>Category</th><th>Variants</th>${adminView?'<th>Total Qty</th><th>Unit</th>':''}<th>Actions</th></tr></thead>
-    <tbody>${tableBody || '<tr class="empty-row"><td colspan="6">No stock data. Sync from GitHub first.</td></tr>'}</tbody></table></div></div>`;
+    <tbody>${tableBody || '<tr class="empty-row"><td colspan="6">No stock data. Sync from GitHub first.</td>'}</tbody>
+  </table></div></div>`;
 }
 
 function clearStock(){
@@ -1237,13 +1261,16 @@ function pageUsers(){
   return `<div class="page-head"><div class="page-title">User Management</div><div class="page-sub">${DB.users.length} total users</div></div>
   <div class="card"><div class="card-head"><span class="card-title">⏳ Pending Approvals (${pending.length})</span></div>
     <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody>${pending.map(rowHtml).join('')||'<tr><td colspan="5">No pending approvals</td></tr>'}</tbody></table></div></div>
+    <tbody>${pending.map(rowHtml).join('')||'<tr class="empty-row"><td colspan="5">No pending approvals</td>'}</tbody>
+  </table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">✓ Active Users</span></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody>${active.map(rowHtml).join('')||'<tr><td colspan="5">No active users</td></tr>'}</tbody></table></div></div>
+    <div class="tbl-wrap"><td><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>${active.map(rowHtml).join('')||'<tr class="empty-row"><td colspan="5">No active users</td>'}</tbody>
+  </table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">✗ Inactive Users</span></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
-    <tbody>${inactive.map(rowHtml).join('')||'<tr><td colspan="5">No inactive users</td></tr>'}</tbody></table></div></div>`;
+    <div class="tbl-wrap"><tr><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody>${inactive.map(rowHtml).join('')||'<tr class="empty-row"><td colspan="5">No inactive users</td>'}</tbody>
+  </table></div></div>`;
 }
 
 function pageGitHubStock(){
@@ -1271,6 +1298,7 @@ function pageGitHubStock(){
   <div class="card"><div class="card-head"><span class="card-title">🔗 Cloud Token Storage</span></div>
     <div class="info-box">✅ GitHub token is stored on <strong>npoint.io</strong> (free cloud storage). All devices share the same token.</div>
     <div><strong>npoint ID:</strong> <code>${NPIO_ID}</code></div>
+    ${isAdmin() ? `<button class="btn btn-ghost btn-sm" onclick="updateNpointId()">🔄 Update npoint ID</button>` : ''}
   </div>`;
 }
 
@@ -1397,6 +1425,7 @@ window.clearLogs = clearLogs;
 window.renderLogTable = renderLogTable;
 window.showResetModal = showResetModal;
 window.addImageRow = addImageRow;
+window.updateNpointId = updateNpointId;
 
 // Start the app
 initDB();
