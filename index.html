@@ -27,6 +27,20 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5}
 
+.setup-screen{display:none;min-height:100vh;background:linear-gradient(135deg,#0f1923,#1a2e40);align-items:center;justify-content:center;padding:20px}
+.setup-screen.show{display:flex}
+.setup-card{background:rgba(255,255,255,.06);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:36px;max-width:500px;width:100%}
+.setup-card h2{font-size:24px;font-weight:700;color:#fff;margin-bottom:8px}
+.setup-card p{font-size:13px;color:rgba(255,255,255,.5);margin-bottom:24px}
+.setup-input{width:100%;padding:12px 14px;border:1.5px solid rgba(255,255,255,.12);border-radius:10px;font-size:14px;background:rgba(255,255,255,.07);color:#fff;margin-bottom:14px}
+.setup-input::placeholder{color:rgba(255,255,255,.25)}
+.setup-input:focus{outline:none;border-color:#3a7bd5}
+.setup-btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;background:linear-gradient(135deg,#2c5364,#3a7bd5);color:#fff}
+.setup-alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px;display:none}
+.setup-success{background:rgba(22,163,74,.15);color:#4ade80;border:1px solid rgba(22,163,74,.3)}
+.setup-error{background:rgba(220,38,38,.15);color:#f87171;border:1px solid rgba(220,38,38,.3)}
+.info-box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px}
+
 .auth-bg{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);position:relative}
 .auth-card{background:var(--surface);border:1px solid var(--border);border-radius:28px;padding:44px 40px;width:100%;max-width:420px;box-shadow:var(--shadow)}
 .auth-brand{font-family:'Fraunces',serif;font-size:2rem;color:var(--gold);text-align:center}
@@ -132,6 +146,30 @@ tr:hover td{background:var(--s2)}
 <div id="root"></div>
 <div id="toast-root"></div>
 
+<!-- SETUP SCREEN - ONLY SHOWS ON FIRST DEVICE (ADMIN) -->
+<div id="setupScreen" class="setup-screen">
+  <div class="setup-card">
+    <div class="logo-mark" style="width:48px;height:48px;background:linear-gradient(135deg,#2c5364,#3a7bd5);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px">📊</div>
+    <h2>Admin Setup (One Time Only)</h2>
+    <p>Create your private cloud database. After this, all devices will sync automatically.</p>
+    <div class="info-box">
+      🔐 <strong>Create GitHub Token (gist scope only):</strong><br>
+      1. Go to <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings → Tokens</a><br>
+      2. Click "Generate new token (classic)"<br>
+      3. Select ONLY <strong>gist</strong> scope<br>
+      4. Copy the token (starts with ghp_)<br>
+      <br>
+      ⚠️ Keep this token safe. All devices will use it to sync data.
+    </div>
+    <label class="lbl" style="color:rgba(255,255,255,.7)">GitHub Master Token (gist scope)</label>
+    <input class="setup-input" type="password" id="setupToken" placeholder="ghp_xxxx...">
+    <label class="lbl" style="color:rgba(255,255,255,.7)">Admin Password</label>
+    <input class="setup-input" type="password" id="setupAdminPw" placeholder="Create admin password (min 4 chars)">
+    <button id="setupBtn" class="setup-btn" onclick="setupMasterDatabase()">🚀 Create Private Database →</button>
+    <div id="setupAlert" class="setup-alert"></div>
+  </div>
+</div>
+
 <script>
 'use strict';
 
@@ -154,74 +192,267 @@ const isAdminLike = () => ['admin','subadmin'].includes(CU?.role);
 const canEdit = () => CU?.role === 'admin';
 const isAdminOrSubAdmin = () => ['admin','subadmin'].includes(CU?.role);
 
-const SK = {U:'ff_u',F:'ff_f',L:'ff_l',CO:'ff_co',TH:'ff_th',ST:'ff_st',IM:'ff_im',AB:'ff_ab',GH:'ff_gh_url',GS2:'ff_gh_sha',CATS:'ff_cats',GL:'ff_gist_tok',GID:'ff_gist_id'};
+const SK = {U:'ff_u',F:'ff_f',L:'ff_l',CO:'ff_co',TH:'ff_th',ST:'ff_st',IM:'ff_im',AB:'ff_ab',GH:'ff_gh_url',GS2:'ff_gh_sha',CATS:'ff_cats',TOK:'ff_master_token',GID:'ff_gist_id'};
 let DB={users:[],fabrics:[],logs:[],company:'FabricFlow'};
-let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='', GIST_TOKEN='', GIST_ID='';
-let _autoSyncTimer = null;
-const AUTO_SYNC_INTERVAL = 2 * 60 * 1000;
+let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='', MASTER_TOKEN='', GIST_ID='';
+let _saveTimer=null;
+let _syncTimer=null;
+const AUTO_SYNC_INTERVAL = 2 * 60 * 1000; // 2 minutes
+const GIST_FILE = 'fabricflow_db.json';
 
+// ========== MASTER SETUP (Only admin runs once) ==========
+async function setupMasterDatabase(){
+  const token = document.getElementById('setupToken').value.trim();
+  const adminPw = document.getElementById('setupAdminPw').value;
+  if(!token){ showSetupAlert('GitHub token required','setup-error'); return; }
+  if(!adminPw || adminPw.length<4){ showSetupAlert('Admin password must be at least 4 characters','setup-error'); return; }
+  
+  // Validate token by testing GitHub API
+  const testRes = await fetch('https://api.github.com/user', {
+    headers: { 'Authorization': 'token '+token, 'User-Agent': 'FabricFlow' }
+  });
+  if(!testRes.ok){
+    showSetupAlert('Invalid GitHub token. Please check and try again.','setup-error');
+    return;
+  }
+  
+  const btn = document.getElementById('setupBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Creating private database...';
+  
+  try{
+    const salt = genSalt();
+    const hash = await hashPass(adminPw, salt);
+    
+    // Create initial database with admin user
+    const initialData = {
+      masterToken: token,
+      users: [{
+        id: uid(),
+        fullName: 'Master Admin',
+        mobile: '9999999999',
+        email: 'admin@fabricflow.com',
+        password: hash,
+        salt: salt,
+        role: 'admin',
+        status: 'approved',
+        createdAt: new Date().toLocaleString()
+      }],
+      fabrics: [],
+      logs: [],
+      company: 'FabricFlow',
+      stock: {},
+      imgs: {},
+      gh_url: '',
+      created: new Date().toISOString()
+    };
+    
+    // Create PRIVATE Gist (not public)
+    const createRes = await fetch('https://api.github.com/gists', {
+      method: 'POST',
+      headers: { 'Authorization': 'token '+token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        description: 'FabricFlow Private Database - Do not share',
+        public: false,  // ← PRIVATE Gist
+        files: { [GIST_FILE]: { content: JSON.stringify(initialData, null, 2) } }
+      })
+    });
+    if(!createRes.ok) throw new Error('Gist creation failed: '+createRes.status);
+    const gist = await createRes.json();
+    GIST_ID = gist.id;
+    MASTER_TOKEN = token;
+    
+    // Save master token and Gist ID (this device only)
+    localStorage.setItem(SK.TOK, token);
+    localStorage.setItem(SK.GID, GIST_ID);
+    
+    // Load the data
+    DB = initialData;
+    
+    showSetupAlert('✅ Private database created! Redirecting to login...', 'setup-success');
+    setTimeout(()=> window.location.reload(), 1500);
+  } catch(e){
+    showSetupAlert('❌ Error: '+e.message, 'setup-error');
+    btn.disabled = false;
+    btn.textContent = '🚀 Create Private Database';
+  }
+}
+
+function showSetupAlert(msg, cls){
+  const el = document.getElementById('setupAlert');
+  el.textContent = msg;
+  el.className = `setup-alert ${cls}`;
+  el.style.display = 'block';
+}
+
+// ========== PRIVATE GIST DATABASE OPERATIONS ==========
+async function loadFromPrivateGist(){
+  if(!MASTER_TOKEN || !GIST_ID) return false;
+  try{
+    const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
+      headers:{'Authorization':'token '+MASTER_TOKEN,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'}
+    });
+    if(!r.ok){
+      if(r.status === 401) console.warn('Token expired or invalid');
+      throw new Error('HTTP '+r.status);
+    }
+    const gist = await r.json();
+    const file = gist.files && gist.files[GIST_FILE];
+    if(file && file.content){
+      const data = JSON.parse(file.content);
+      DB.users = data.users || [];
+      DB.fabrics = data.fabrics || [];
+      DB.logs = data.logs || [];
+      DB.company = data.company || 'FabricFlow';
+      STOCK = data.stock || {};
+      IMGS = data.imgs || {};
+      GH_URL = data.gh_url || '';
+      // Ensure master token is always updated in DB
+      if(data.masterToken) MASTER_TOKEN = data.masterToken;
+      return true;
+    }
+    return false;
+  } catch(e){
+    console.warn('Load from private Gist failed:', e);
+    return false;
+  }
+}
+
+async function saveToPrivateGist(){
+  if(!MASTER_TOKEN || !GIST_ID) return false;
+  try{
+    const payload = {
+      masterToken: MASTER_TOKEN,
+      users: DB.users,
+      fabrics: DB.fabrics,
+      logs: DB.logs.slice(0,300),
+      company: DB.company,
+      stock: STOCK,
+      imgs: IMGS,
+      gh_url: GH_URL,
+      last_saved: new Date().toISOString()
+    };
+    
+    const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'token '+MASTER_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        files: { [GIST_FILE]: { content: JSON.stringify(payload, null, 2) } }
+      })
+    });
+    if(!r.ok){
+      if(r.status === 401){
+        console.warn('Token expired! Admin needs to update token in Settings.');
+        showToast('⚠️ Master token expired! Update in Settings', 'err');
+      }
+      throw new Error('Save failed');
+    }
+    return true;
+  } catch(e){
+    console.warn('Save to private Gist failed:', e);
+    return false;
+  }
+}
+
+function scheduleSave(){
+  if(_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(async()=>{
+    await saveToPrivateGist();
+    // Backup to localStorage
+    localStorage.setItem(SK.U, JSON.stringify(DB.users));
+    localStorage.setItem(SK.F, JSON.stringify(DB.fabrics));
+    localStorage.setItem(SK.L, JSON.stringify(DB.logs));
+    localStorage.setItem(SK.CO, DB.company);
+    localStorage.setItem(SK.ST, JSON.stringify(STOCK));
+    localStorage.setItem(SK.IM, JSON.stringify(IMGS));
+    localStorage.setItem(SK.GH, GH_URL);
+  }, 2000);
+}
+
+function addLog(action,details){
+  DB.logs.unshift({id:uid(),userId:CU?.id||'sys',userName:CU?.fullName||'System',action,details,time:new Date().toLocaleString()});
+  if(DB.logs.length>500) DB.logs=DB.logs.slice(0,500);
+  scheduleSave();
+}
+
+// ========== UPDATE MASTER TOKEN (Admin can update if expired) ==========
+async function updateMasterToken(){
+  const newToken = prompt('Enter new GitHub Master Token (gist scope only):');
+  if(!newToken) return;
+  
+  // Validate token
+  const testRes = await fetch('https://api.github.com/user', {
+    headers: { 'Authorization': 'token '+newToken, 'User-Agent': 'FabricFlow' }
+  });
+  if(!testRes.ok){
+    showToast('Invalid token!','err');
+    return;
+  }
+  
+  MASTER_TOKEN = newToken;
+  localStorage.setItem(SK.TOK, MASTER_TOKEN);
+  
+  // Update the master token in the Gist
+  const db = DB;
+  db.masterToken = MASTER_TOKEN;
+  await saveToPrivateGist();
+  
+  showToast('✅ Master token updated! All devices will now use new token','ok');
+  addLog('TOKEN_UPDATED','Master token was renewed');
+}
+
+// ========== INIT ==========
 async function initDB(){
   isDark = localStorage.getItem(SK.TH) !== 'light';
   applyTheme();
   GH_URL = localStorage.getItem(SK.GH) || '';
   GH_SHA = localStorage.getItem(SK.GS2) || '';
-  GIST_TOKEN = localStorage.getItem(SK.GL) || '';
+  MASTER_TOKEN = localStorage.getItem(SK.TOK) || '';
   GIST_ID = localStorage.getItem(SK.GID) || '';
   
-  const su=localStorage.getItem(SK.U);
-  if(su){ try{ DB.users=JSON.parse(su); }catch(e){} }
-  if(!DB.users.length) await createDefaultAdmin();
-  DB.fabrics = tryParse(localStorage.getItem(SK.F), []);
-  DB.logs = tryParse(localStorage.getItem(SK.L), []);
-  DB.company = localStorage.getItem(SK.CO) || 'FabricFlow';
-  STOCK = tryParse(localStorage.getItem(SK.ST), {});
-  IMGS = tryParse(localStorage.getItem(SK.IM), {});
-  
-  // Sync from Gist if configured
-  if(GIST_TOKEN && GIST_ID){
-    try{ await gistFetchAndApply(); }catch(e){ console.warn('Gist load failed:',e); }
+  // If no master token configured, show setup screen
+  if(!MASTER_TOKEN || !GIST_ID){
+    document.getElementById('setupScreen').classList.add('show');
+    return;
   }
   
+  // Load data from private Gist
+  await loadFromPrivateGist();
+  
+  // Ensure admin exists
+  if(DB.users.length === 0){
+    const salt=genSalt();
+    const hash=await hashPass('admin123',salt);
+    DB.users=[{id:uid(),fullName:'Master Admin',mobile:'9999999999',email:'admin@fabricflow.com',password:hash,salt,role:'admin',status:'approved',createdAt:new Date().toLocaleString()}];
+    scheduleSave();
+  }
+  
+  // Check for existing session
   const sess = sessionStorage.getItem('ffs');
   if(sess && !CU){ 
     try{
       const d=JSON.parse(sess); 
       const f=DB.users.find(u=>u.id===d.id && u.status==='approved'); 
       if(f) CU=f;
-    }catch(e){} 
+    } catch(e){} 
   }
   renderApp();
   startAutoSync();
+  startBackgroundSync();
 }
 
-function tryParse(s, def){ try{ return s?JSON.parse(s):def; }catch(e){ return def; } }
-
-async function createDefaultAdmin(){
-  const salt=genSalt(), hash=await hashPass('admin123',salt);
-  DB.users=[{id:uid(),fullName:'Master Admin',mobile:'9999999999',email:'admin@fabricflow.com',password:hash,salt,role:'admin',status:'approved',createdAt:new Date().toLocaleString()}];
-  saveToLocal();
-}
-
-function saveToLocal(){
-  localStorage.setItem(SK.U, JSON.stringify(DB.users));
-  localStorage.setItem(SK.F, JSON.stringify(DB.fabrics));
-  localStorage.setItem(SK.L, JSON.stringify(DB.logs));
-  localStorage.setItem(SK.CO, DB.company);
-  localStorage.setItem(SK.ST, JSON.stringify(STOCK));
-  localStorage.setItem(SK.IM, JSON.stringify(IMGS));
-  localStorage.setItem(SK.GH, GH_URL);
-  localStorage.setItem(SK.GS2, GH_SHA);
-  localStorage.setItem(SK.TH, isDark ? 'dark' : 'light');
-}
-
-function addLog(action,details){
-  DB.logs.unshift({id:uid(),userId:CU?.id||'sys',userName:CU?.fullName||'System',action,details,time:new Date().toLocaleString()});
-  if(DB.logs.length>500) DB.logs=DB.logs.slice(0,500);
-  localStorage.setItem(SK.L,JSON.stringify(DB.logs));
+// ========== BACKGROUND SYNC (every 30 seconds) ==========
+function startBackgroundSync(){
+  if(_syncTimer) clearInterval(_syncTimer);
+  _syncTimer = setInterval(async()=>{
+    await loadFromPrivateGist();
+    // Refresh UI if needed
+    if(CU && PAGE) renderApp();
+  }, 30000); // Sync every 30 seconds
 }
 
 function applyTheme(){ document.documentElement.setAttribute('data-theme', isDark?'dark':'light'); }
-function toggleTheme(){ isDark=!isDark; applyTheme(); saveToLocal(); renderApp(); }
+function toggleTheme(){ isDark=!isDark; applyTheme(); scheduleSave(); renderApp(); }
 
 // ========== AUTH ==========
 async function doLogin(){
@@ -229,28 +460,12 @@ async function doLogin(){
   const pw=document.getElementById('l-pw').value;
   const err=document.getElementById('l-err'); 
   err.classList.remove('on');
-  if(!id||!pw){ 
-    err.textContent='All fields required'; 
-    err.classList.add('on'); 
-    return; 
-  }
+  if(!id||!pw){ err.textContent='All fields required'; err.classList.add('on'); return; }
   const user=DB.users.find(u=>u.mobile===id||u.email===id);
-  if(!user){ 
-    err.textContent='User not found'; 
-    err.classList.add('on'); 
-    return; 
-  }
-  if(user.status!=='approved'){ 
-    err.textContent=user.status==='pending'?'Pending admin approval':'Account deactivated'; 
-    err.classList.add('on'); 
-    return; 
-  }
+  if(!user){ err.textContent='User not found'; err.classList.add('on'); return; }
+  if(user.status!=='approved'){ err.textContent=user.status==='pending'?'Pending admin approval':'Account deactivated'; err.classList.add('on'); return; }
   const hash=await hashPass(pw,user.salt);
-  if(hash!==user.password){ 
-    err.textContent='Wrong password'; 
-    err.classList.add('on'); 
-    return; 
-  }
+  if(hash!==user.password){ err.textContent='Wrong password'; err.classList.add('on'); return; }
   CU=user; 
   sessionStorage.setItem('ffs',JSON.stringify({id:user.id}));
   addLog('LOGIN',user.role);
@@ -266,29 +481,13 @@ async function doRegister(){
   const role=document.getElementById('r-role').value;
   const err=document.getElementById('r-err'); 
   err.classList.remove('on');
-  if(!name||!mob||!pw){ 
-    err.textContent='All fields required'; 
-    err.classList.add('on'); 
-    return; 
-  }
-  if(!validMob(mob)){ 
-    err.textContent='Invalid mobile (10 digits, start 6-9)'; 
-    err.classList.add('on'); 
-    return; 
-  }
-  if(pw.length<6){ 
-    err.textContent='Password min 6 characters'; 
-    err.classList.add('on'); 
-    return; 
-  }
-  if(DB.users.find(u=>u.mobile===mob)){ 
-    err.textContent='Mobile already registered'; 
-    err.classList.add('on'); 
-    return; 
-  }
+  if(!name||!mob||!pw){ err.textContent='All fields required'; err.classList.add('on'); return; }
+  if(!validMob(mob)){ err.textContent='Invalid mobile (10 digits, start 6-9)'; err.classList.add('on'); return; }
+  if(pw.length<6){ err.textContent='Password min 6 characters'; err.classList.add('on'); return; }
+  if(DB.users.find(u=>u.mobile===mob)){ err.textContent='Mobile already registered'; err.classList.add('on'); return; }
   const salt=genSalt(), hash=await hashPass(pw,salt);
   DB.users.push({id:uid(),fullName:name,mobile:mob,email:email||'',password:hash,salt,role,status:'pending',createdAt:new Date().toLocaleString()});
-  saveToLocal(); 
+  scheduleSave();
   addLog('REGISTER',`${name} as ${role}`);
   showToast('Registered! Awaiting admin approval.');
   switchAuthTab('login');
@@ -310,63 +509,10 @@ function switchAuthTab(t){
 }
 
 // ========== USER MANAGEMENT ==========
-function approveUser(id){ const u=DB.users.find(u=>u.id===id); if(u){u.status='approved';saveToLocal();addLog('APPROVE',u.fullName);showToast(`Approved ${u.fullName}`);renderApp();} }
-function rejectUser(id){ const u=DB.users.find(u=>u.id===id); DB.users=DB.users.filter(u=>u.id!==id); saveToLocal(); addLog('REJECT',u?.fullName||id); showToast('User rejected','err'); renderApp(); }
-function deactivateUser(id){ const u=DB.users.find(u=>u.id===id); if(u&&u.role!=='admin'){u.status='inactive';saveToLocal();addLog('DEACTIVATE',u.fullName);showToast(`${u.fullName} deactivated`);renderApp();} }
-function activateUser(id){ const u=DB.users.find(u=>u.id===id); if(u){u.status='approved';saveToLocal();addLog('ACTIVATE',u.fullName);showToast(`${u.fullName} activated`);renderApp();} }
-
-// ========== GIST SYNC (Shared Database) ==========
-async function gistFetchAndApply(){
-  const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
-    headers:{'Authorization':'token '+GIST_TOKEN,'Accept':'application/vnd.github.v3+json'}
-  });
-  if(!r.ok) throw new Error('Gist fetch failed');
-  const gist = await r.json();
-  const file = gist.files && gist.files['fabricflow_db.json'];
-  if(file && file.content){
-    const data = JSON.parse(file.content);
-    if(data.users) DB.users = data.users;
-    if(data.fabrics) DB.fabrics = data.fabrics;
-    if(data.logs) DB.logs = data.logs;
-    if(data.company) DB.company = data.company;
-    if(data.stock) STOCK = data.stock;
-    if(data.imgs) IMGS = data.imgs;
-    if(data.gh_url) GH_URL = data.gh_url;
-    saveToLocal();
-    renderApp();
-  }
-}
-
-async function saveToGist(){
-  if(!GIST_TOKEN) return;
-  const payload = {
-    users: DB.users, fabrics: DB.fabrics, logs: DB.logs.slice(0,200),
-    company: DB.company, stock: STOCK, imgs: IMGS, gh_url: GH_URL,
-    saved_at: new Date().toISOString()
-  };
-  const body = {files:{'fabricflow_db.json':{content:JSON.stringify(payload,null,2)}}};
-  if(!GIST_ID){
-    body.description = 'FabricFlow Shared Database';
-    body.public = false;
-    const r = await fetch('https://api.github.com/gists',{
-      method:'POST',
-      headers:{'Authorization':'token '+GIST_TOKEN,'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    });
-    if(!r.ok) throw new Error('Gist creation failed');
-    const g = await r.json();
-    GIST_ID = g.id;
-    localStorage.setItem(SK.GID, GIST_ID);
-  } else {
-    const r = await fetch('https://api.github.com/gists/'+GIST_ID,{
-      method:'PATCH',
-      headers:{'Authorization':'token '+GIST_TOKEN,'Content-Type':'application/json'},
-      body: JSON.stringify(body)
-    });
-    if(!r.ok) throw new Error('Gist update failed');
-  }
-  addLog('GIST_SYNC','Database synced to GitHub Gist');
-}
+function approveUser(id){ const u=DB.users.find(u=>u.id===id); if(u){u.status='approved';scheduleSave();addLog('APPROVE',u.fullName);showToast(`Approved ${u.fullName}`);renderApp();} }
+function rejectUser(id){ const u=DB.users.find(u=>u.id===id); DB.users=DB.users.filter(u=>u.id!==id); scheduleSave(); addLog('REJECT',u?.fullName||id); showToast('User rejected','err'); renderApp(); }
+function deactivateUser(id){ const u=DB.users.find(u=>u.id===id); if(u&&u.role!=='admin'){u.status='inactive';scheduleSave();addLog('DEACTIVATE',u.fullName);showToast(`${u.fullName} deactivated`);renderApp();} }
+function activateUser(id){ const u=DB.users.find(u=>u.id===id); if(u){u.status='approved';scheduleSave();addLog('ACTIVATE',u.fullName);showToast(`${u.fullName} activated`);renderApp();} }
 
 // ========== STOCK PARSING ==========
 function parseStockJSON(json){
@@ -435,13 +581,13 @@ async function importCatalogCSV(file){
             cat:get(row,'CATEGORY'),gsm:get(row,'GSM'),width:get(row,'WIDTH'),
             comp:get(row,'COMPOSITION'),hf:get(row,'HF'),rate:get(row,'RATE')};
           DB.fabrics.push(nf);
-          // Handle image links (pipe-separated or single URL)
           const imgLink=get(row,'IMAGELINK')||get(row,'IMAGE')||get(row,'IMAGE LINK');
           const pipedUrls=imgLink?imgLink.split('|').map(u=>u.trim()).filter(u=>u.startsWith('http')):[];
           if(pipedUrls.length) IMGS[nf.id]=pipedUrls;
           added++;
         }
-        saveToLocal(); addLog('IMPORT_CATALOG', `Added ${added}, skipped ${skipped}`);
+        scheduleSave();
+        addLog('IMPORT_CATALOG', `Added ${added}, skipped ${skipped}`);
         res({added,skipped});
       } catch(err){ rej(err); }
     };
@@ -455,11 +601,9 @@ async function handleCatalogImport(e){
   try{
     const r=await importCatalogCSV(file);
     showToast(`Imported ${r.added} fabrics${r.skipped?`, ${r.skipped} duplicates skipped`:''}`);
-    addLog('IMPORT_CSV_OK', `File: ${file.name}`);
     renderApp();
   }catch(err){
     showToast('Import error: '+err.message,'err');
-    addLog('IMPORT_CSV_ERR', err.message);
   }
   e.target.value='';
 }
@@ -481,7 +625,7 @@ function exportLogsCSV(){
 function clearLogs(){
   if(!isAdmin()) return;
   confirmModal('Clear All Logs','Permanently delete all logs?','danger',()=>{
-    DB.logs=[]; saveToLocal();
+    DB.logs=[]; scheduleSave();
     showToast('Logs cleared');
     renderApp();
   });
@@ -492,7 +636,7 @@ function renderLogTable(){
   const term=(document.getElementById('log-filter')?.value||'').toLowerCase();
   const logs=term?DB.logs.filter(l=>(l.action+l.details+l.userName).toLowerCase().includes(term)):DB.logs;
   if(!logs.length){ wrap.innerHTML='<div style="text-align:center;padding:32px">No logs found</div>'; return; }
-  wrap.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+  wrap.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th><tr></thead>
     <tbody>${logs.slice(0,200).map(l=>`<tr><td style="white-space:nowrap">${esc(l.time)}</td><td>${esc(l.userName)}</td><td><span class="log-tag">${esc(l.action)}</span></td><td>${esc(l.details)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
@@ -504,14 +648,10 @@ function getCategoryList(){
   return all.length ? all : ['Suiting','Shirting','Ladies','Children'];
 }
 
-function saveCategoryList(cats){
-  localStorage.setItem(SK.CATS,JSON.stringify(cats.filter(Boolean)));
-}
-
 function showManageCategories(){
   if(!canEdit()) return;
   const cats=getCategoryList();
-  const rows=cats.map((c,i)=>`<div class="img-url-row"><input value="${esc(c)}" placeholder="Category name" maxlength="50" style="flex:1"><button class="btn btn-sm btn-red" onclick="this.parentElement.remove()">Remove</button></div>`).join('');
+  const rows=cats.map(c=>`<div class="img-url-row"><input value="${esc(c)}" placeholder="Category name" maxlength="50" style="flex:1"><button class="btn btn-sm btn-red" onclick="this.parentElement.remove()">Remove</button></div>`).join('');
   openModal(`<div class="modal-box"><div class="modal-title">🏷 Manage Categories</div><div id="cat-list">${rows}</div><button class="btn btn-sky btn-sm" style="margin-top:10px" onclick="addCategoryRow()">+ Add Category</button>
     <div class="modal-foot"><button class="btn btn-gold" onclick="saveCategories()">Save</button><button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
 }
@@ -524,13 +664,12 @@ function addCategoryRow(){
 function saveCategories(){
   const l=document.getElementById('cat-list');
   const cats=[]; if(l) l.querySelectorAll('input').forEach(i=>{const v=(i.value||'').trim();if(v)cats.push(v);});
-  saveCategoryList(cats);
+  localStorage.setItem(SK.CATS,JSON.stringify(cats.filter(Boolean)));
   addLog('CATEGORIES','Updated: '+cats.join(', '));
   showToast('Categories saved: '+cats.length+' categories');
   closeModal(); renderApp();
 }
 
-// ========== ASSIGN CATEGORY TO STOCK ==========
 function assignCategoryToStock(fabricName){
   if(!isAdminOrSubAdmin()) return;
   const fab=DB.fabrics.find(f=>f.name.toUpperCase()===fabricName.toUpperCase());
@@ -538,7 +677,7 @@ function assignCategoryToStock(fabricName){
   const cats=getCategoryList();
   const opts=cats.map(x=>`<option value="${esc(x)}" ${curCat===x?'selected':''}>${esc(x)}</option>`).join('');
   openModal(`<div class="modal-box"><div class="modal-title">Assign Category</div>
-    <div style="color:var(--t2);margin-bottom:14px">Fabric: <strong>${esc(fabricName)}</strong></div>
+    <div>Fabric: <strong>${esc(fabricName)}</strong></div>
     <div class="modal-fld"><label>Category</label>
       <select id="stk-cat-sel" style="width:100%;padding:10px">${opts}</select>
       <input id="stk-cat-new" placeholder="Or type a new category..." maxlength="50" style="width:100%;margin-top:8px;padding:9px">
@@ -561,9 +700,10 @@ function saveStockCategory(fabricName){
   }
   if(typed){
     const existing=getCategoryList();
-    if(!existing.includes(typed)) saveCategoryList([...existing,typed]);
+    if(!existing.includes(typed)) localStorage.setItem(SK.CATS,JSON.stringify([...existing,typed]));
   }
-  saveToLocal(); addLog('ASSIGN_CAT',`${fabricName} → ${cat}`);
+  scheduleSave();
+  addLog('ASSIGN_CAT',`${fabricName} → ${cat}`);
   showToast(`Category "${cat}" assigned to ${fabricName}`);
   closeModal(); renderApp();
 }
@@ -573,11 +713,11 @@ const getImages = id => IMGS[id]||[];
 function saveImages(id,urls){
   const valid=urls.map(u=>san(u,500)).filter(u=>u.startsWith('http'));
   if(valid.length) IMGS[id]=valid; else delete IMGS[id];
-  saveToLocal();
+  scheduleSave();
 }
 function addImageRow(){ const l=document.getElementById('img-url-list'); if(!l) return; const d=document.createElement('div'); d.className='img-url-row'; d.innerHTML=`<input placeholder="https://i.ibb.co/..."><button class="btn btn-sm btn-red" onclick="this.parentElement.remove()">Remove</button>`; l.appendChild(d); }
 
-// ========== GITHUB STOCK SYNC (Auto-sync every 2 minutes) ==========
+// ========== GITHUB STOCK SYNC ==========
 async function saveAndFetchGitHub(){
   const url = document.getElementById('gh-url-inp')?.value.trim();
   if(!url){ showToast('Enter GitHub raw JSON URL','err'); return; }
@@ -593,7 +733,6 @@ async function saveAndFetchGitHub(){
     const r = await fetch(fetchUrl, {cache:'no-cache'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const text = await r.text();
-    if(!text||text.trim().length<5) throw new Error('Empty response');
     let json;
     try{ json=JSON.parse(text); }
     catch(pe){ throw new Error('Invalid JSON: '+pe.message); }
@@ -604,7 +743,7 @@ async function saveAndFetchGitHub(){
     GH_SHA = String(hash);
     GH_URL = url;
     STOCK = newStock;
-    saveToLocal();
+    scheduleSave();
     const now = new Date().toLocaleString();
     localStorage.setItem('ff_last_sync', now);
     setStatus(`✓ Connected — ${Object.keys(STOCK).length} fabric types · ${Object.values(STOCK).reduce((a,b)=>a+b.length,0)} shades · ${now}`, 'ok');
@@ -622,7 +761,7 @@ async function saveAndFetchGitHub(){
 
 function clearGitHubUrl(){
   GH_URL=''; GH_SHA='';
-  saveToLocal();
+  scheduleSave();
   addLog('GH_DISCONNECT','GitHub URL disconnected');
   showToast('GitHub URL disconnected');
   renderApp();
@@ -673,7 +812,7 @@ async function autoSyncStock(isManual=false){
       showSyncBadge('nochange');
       return;
     }
-    GH_SHA=sha; STOCK=newStock; saveToLocal();
+    GH_SHA=sha; STOCK=newStock; scheduleSave();
     localStorage.setItem('ff_last_sync', new Date().toLocaleString());
     addLog('AUTO_SYNC', `Stock updated — ${Object.keys(STOCK).length} fabric types`);
     showSyncBadge('ok');
@@ -691,21 +830,6 @@ function startAutoSync(){
   _autoSyncTimer = setInterval(()=>autoSyncStock(false), AUTO_SYNC_INTERVAL);
 }
 
-// ========== GIST SETTINGS ==========
-async function saveGistConfig(){
-  const tok = document.getElementById('gist-tok-inp')?.value.trim();
-  if(!tok){ showToast('Enter GitHub token','err'); return; }
-  GIST_TOKEN = tok;
-  localStorage.setItem(SK.GL, tok);
-  try{
-    await saveToGist();
-    showToast('Gist configured! Database will sync across devices');
-    addLog('GIST_CONFIG','GitHub Gist connected');
-  }catch(e){
-    showToast('Gist error: '+e.message,'err');
-  }
-}
-
 // ========== FABRIC CRUD ==========
 function getStockFor(name){
   if(!name) return null;
@@ -720,7 +844,7 @@ function updateStockQuantity(fabricName, newQty){
   const up=fabricName.toUpperCase().trim();
   if(STOCK[up]){ STOCK[up][0].qty = qty; }
   else { STOCK[up] = [{ design: 'MAIN', qty: qty, unit: 'Rolls', comment: '' }]; }
-  saveToLocal();
+  scheduleSave();
   addLog('UPDATE_STOCK', `${fabricName} → ${qty} Rolls`);
   showToast(`${fabricName} stock updated to ${qty}`);
   renderApp();
@@ -732,7 +856,8 @@ function addFabric(d){
   DB.fabrics.push({id:uid(), sn:san(d.sn,20), name:san(d.name,80), cat:san(d.cat||'',50), 
     gsm:san(d.gsm||'',30), width:san(d.width||'',30), comp:san(d.comp||'',100), 
     hf:san(d.hf||'',20), rate:san(d.rate||'',30)});
-  saveToLocal(); addLog('ADD_FABRIC',`${d.sn} - ${d.name}`);
+  scheduleSave();
+  addLog('ADD_FABRIC',`${d.sn} - ${d.name}`);
   showToast(`Added ${d.name}`);
   renderApp(); return true;
 }
@@ -742,7 +867,8 @@ function deleteFabric(id){
   if(f && confirm(`Delete "${f.name}"?`)){
     DB.fabrics=DB.fabrics.filter(f=>f.id!==id);
     delete IMGS[id];
-    saveToLocal(); addLog('DELETE_FABRIC',f.name);
+    scheduleSave();
+    addLog('DELETE_FABRIC',f.name);
     showToast(`Deleted ${f.name}`,'err');
     renderApp();
   }
@@ -753,7 +879,7 @@ function editFabricModal(id){
   if(!f||!canEdit()) return;
   const stockQty = getStockFor(f.name)?.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0) || 0;
   const imgs=getImages(id);
-  const irows=imgs.map((u,i)=>`<div class="img-url-row"><input value="${esc(u)}" placeholder="https://..."><button class="btn btn-sm btn-red" onclick="this.parentElement.remove()">Remove</button></div>`).join('');
+  const irows=imgs.map(u=>`<div class="img-url-row"><input value="${esc(u)}" placeholder="https://..."><button class="btn btn-sm btn-red" onclick="this.parentElement.remove()">Remove</button></div>`).join('');
   openModal(`<div class="modal-box"><div class="modal-title">Edit ${esc(f.name)}</div>
     <div class="modal-fld"><label>SN</label><input id="ed-sn" value="${esc(f.sn)}"></div>
     <div class="modal-fld"><label>Name</label><input id="ed-name" value="${esc(f.name)}"></div>
@@ -764,7 +890,7 @@ function editFabricModal(id){
     <div class="modal-fld"><label>HF</label><input id="ed-hf" value="${esc(f.hf||'')}"></div>
     <div class="modal-fld"><label>Rate</label><input id="ed-rate" value="${esc(f.rate||'')}"></div>
     <div class="modal-fld"><label>Stock Qty</label><input type="number" id="ed-stock" value="${stockQty}"></div>
-    <div style="margin-top:16px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Image URLs</span><button class="btn btn-sm btn-sky" onclick="addImageRow()">+ Add URL</button></div><div id="img-url-list">${irows}</div></div>
+    <div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Image URLs</span><button class="btn btn-sm btn-sky" onclick="addImageRow()">+ Add URL</button></div><div id="img-url-list">${irows}</div></div>
     <div class="modal-foot"><button class="btn btn-gold" onclick="saveEditFabric('${id}')">Save</button>
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
 }
@@ -783,7 +909,9 @@ function saveEditFabric(id){
     const l=document.getElementById('img-url-list');
     const urls=[]; if(l) l.querySelectorAll('input').forEach(inp=>{const v=san(inp.value,500);if(v&&v.startsWith('http'))urls.push(v);});
     saveImages(id,urls);
-    saveToLocal(); addLog('EDIT_FABRIC',`${sn} - ${name}`); showToast('Fabric updated');
+    scheduleSave();
+    addLog('EDIT_FABRIC',`${sn} - ${name}`);
+    showToast('Fabric updated');
     if(stockQty !== undefined) updateStockQuantity(name, stockQty);
     renderApp();
   }
@@ -802,7 +930,7 @@ function showAddFabricModal(){
     <div class="modal-fld"><label>Composition</label><input id="add-comp" placeholder="Composition"></div>
     <div class="modal-fld"><label>HF</label><input id="add-hf" placeholder="HF/Finish"></div>
     <div class="modal-fld"><label>Rate</label><input id="add-rate" placeholder="Rate"></div>
-    <div style="margin-top:14px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Image URLs</span><button class="btn btn-sm btn-sky" onclick="addImageRow()">+ Add URL</button></div><div id="img-url-list"></div></div>
+    <div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>Image URLs</span><button class="btn btn-sm btn-sky" onclick="addImageRow()">+ Add URL</button></div><div id="img-url-list"></div></div>
     <div class="modal-foot"><button class="btn btn-gold" onclick="submitAddFabric()">Create</button>
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
 }
@@ -844,21 +972,21 @@ function viewFabric(id){
   const adminView=isAdminOrSubAdmin();
   openModal(`<div class="modal-box"><div class="modal-title">${esc(f.name)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <div><label style="color:var(--t3);font-size:.63rem">SN</label><div>${esc(f.sn)}</div></div>
-      <div><label style="color:var(--t3);font-size:.63rem">Category</label><div class="sky">${esc(f.cat||'—')}</div></div>
-      <div><label style="color:var(--t3);font-size:.63rem">GSM</label><div>${esc(f.gsm||'—')}</div></div>
-      <div><label style="color:var(--t3);font-size:.63rem">Width</label><div>${esc(f.width||'—')}</div></div>
-      <div><label style="color:var(--t3);font-size:.63rem">Composition</label><div>${esc(f.comp||'—')}</div></div>
-      <div><label style="color:var(--t3);font-size:.63rem">Rate</label><div class="gold">${esc(f.rate||'—')}</div></div>
+      <div><label>SN</label><div>${esc(f.sn)}</div></div>
+      <div><label>Category</label><div class="sky">${esc(f.cat||'—')}</div></div>
+      <div><label>GSM</label><div>${esc(f.gsm||'—')}</div></div>
+      <div><label>Width</label><div>${esc(f.width||'—')}</div></div>
+      <div><label>Composition</label><div>${esc(f.comp||'—')}</div></div>
+      <div><label>Rate</label><div class="gold">${esc(f.rate||'—')}</div></div>
       ${adminView?`<div><label>HF</label><div>${esc(f.hf||'—')}</div></div>
       <div><label>Stock</label><div><input type="number" id="modalStockQty" value="${stockQty}" style="width:80px;padding:5px"><button class="btn btn-sm btn-gold" style="margin-left:8px" onclick="updateStockQuantity('${f.name}', document.getElementById('modalStockQty').value); closeModal();">Update</button></div></div>`:''}
     </div>
     ${imgs.length?`<div class="img-gallery">${imgs.map(u=>`<img src="${esc(u)}" class="img-thumb" onclick="window.open('${esc(u)}','_blank')" onerror="this.style.opacity='.3'">`).join('')}</div>`:''}
     ${stock?.length?`<div style="background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px;margin-top:12px">
-      <div style="font-size:.65rem;font-weight:700;color:var(--t3);margin-bottom:9px">Stock — ${esc(f.name)}</div>
+      <div>Stock — ${esc(f.name)}</div>
       <table style="width:100%"><thead><tr><th>Design</th><th>Qty</th><th>Unit</th><th>Comment</th></tr></thead>
-      <tbody>${stock.map(i=>`<td><td style="font-weight:700">${esc(i.design)}</td><td class="gold">${i.qty}</td><td>${esc(i.unit)}</td><td>${esc(i.comment||'—')}</td></tr>`).join('')}</tbody>
-      <tfoot><tr><td><strong>Total</strong></td><td><strong>${stock.reduce((a,b)=>a+b.qty,0)}</strong></td><td>${esc(stock[0]?.unit||'Rolls')}</td><td></td></tr></tfoot></table>
+      <tbody>${stock.map(i=>`<tr><td style="font-weight:700">${esc(i.design)}</td><td class="gold">${i.qty}</td><td>${esc(i.unit)}</td><td>${esc(i.comment||'—')}</td></tr>`).join('')}</tbody>
+      <tfoot><tr>}<strong>Total</strong></td>}<strong>${stock.reduce((a,b)=>a+b.qty,0)}</strong></td>}<strong>${esc(stock[0]?.unit||'Rolls')}</strong></td>}<strong>${esc(stock[0]?.unit||'Rolls')}</strong></td>}<strong>${esc(stock[0]?.unit||'Rolls')}</strong></td>}</tfoot></table>
     </div>`:''}
     <div class="modal-foot"><button class="btn btn-green" onclick="shareFabricWA('${f.id}');closeModal()">Share on WhatsApp</button>
     ${canEdit()?`<button class="btn btn-gold" onclick="closeModal();editFabricModal('${f.id}')">Edit</button>`:''}
@@ -888,7 +1016,7 @@ function shareStockWA(name){
 // ========== SETTINGS ==========
 function saveCompany(){
   const v=san(document.getElementById('co-inp')?.value,80);
-  if(v){ DB.company=v; saveToLocal(); addLog('UPDATE_CO',v); showToast('Company updated'); renderApp(); }
+  if(v){ DB.company=v; scheduleSave(); addLog('UPDATE_CO',v); showToast('Company updated'); renderApp(); }
 }
 
 async function changePassword(){
@@ -903,7 +1031,9 @@ async function changePassword(){
   const salt=genSalt(), hash=await hashPass(np,salt);
   CU.password=hash; CU.salt=salt;
   const i=DB.users.findIndex(u=>u.id===CU.id); DB.users[i]=CU;
-  saveToLocal(); addLog('CHANGE_PWD','Password changed'); showToast('Password updated');
+  scheduleSave();
+  addLog('CHANGE_PWD','Password changed');
+  showToast('Password updated');
   document.getElementById('pwd-old').value=''; document.getElementById('pwd-new').value=''; document.getElementById('pwd-cf').value='';
   err.classList.remove('on');
 }
@@ -921,9 +1051,22 @@ async function doReset(){
   if(!pw){ showToast('Password required','err'); return; }
   const h=await hashPass(pw,CU.salt);
   if(h!==CU.password){ showToast('Wrong password','err'); return; }
-  closeModal(); localStorage.clear(); await initDB();
-  CU=DB.users.find(u=>u.role==='admin'); sessionStorage.setItem('ffs',JSON.stringify({id:CU.id}));
-  addLog('RESET','Full system reset'); PAGE='dashboard'; renderApp(); showToast('System reset complete');
+  closeModal();
+  // Clear all data
+  DB.users = [];
+  DB.fabrics = [];
+  DB.logs = [];
+  STOCK = {};
+  IMGS = {};
+  const salt=genSalt();
+  DB.users=[{id:uid(),fullName:'Master Admin',mobile:'9999999999',email:'admin@fabricflow.com',password:await hashPass('admin123',salt),salt,role:'admin',status:'approved',createdAt:new Date().toLocaleString()}];
+  scheduleSave();
+  CU = DB.users[0];
+  sessionStorage.setItem('ffs',JSON.stringify({id:CU.id}));
+  addLog('RESET','Full system reset');
+  PAGE='dashboard';
+  renderApp();
+  showToast('System reset complete');
 }
 
 // ========== MODAL ==========
@@ -931,7 +1074,7 @@ let _modalCB=null;
 function confirmModal(title,msg,type,cb){
   _modalCB=cb;
   openModal(`<div class="modal-box"><div class="modal-title ${type==='danger'?'danger':''}">${esc(title)}</div>
-    <p style="color:var(--t2)">${esc(msg)}</p>
+    <p>${esc(msg)}</p>
     <div class="modal-foot"><button class="btn ${type==='danger'?'btn-red':'btn-gold'}" onclick="_modalCB&&_modalCB();closeModal()">Confirm</button>
     <button class="btn btn-ghost" onclick="closeModal()">Cancel</button></div></div>`);
 }
@@ -955,11 +1098,12 @@ function pageDashboard(){
     <div class="kpi"><div class="kpi-label">Pending Users</div><div class="kpi-val ${pending>0?'rd':'grn'}">${pending}</div></div>
     <div class="kpi"><div class="kpi-label">Total Users</div><div class="kpi-val prp">${DB.users.filter(u=>u.status==='approved'&&u.role!=='admin').length}</div></div>
   </div>
-  ${GH_URL ? `<div class="info-box">✓ GitHub Auto-Sync Active · Last sync: ${lastSync} · Auto-sync every 2 minutes</div>` : ''}
+  ${GH_URL ? `<div class="info-box">✓ GitHub Stock Auto-Sync Active · Last sync: ${lastSync} · Auto-sync every 2 minutes</div>` : ''}
   <div class="card"><div class="card-head"><span class="card-title">Quick Actions</span></div>
     <div class="btn-row"><button class="btn btn-gold" onclick="goTo('github')">🐙 Sync from GitHub</button>
     <button class="btn btn-blue" onclick="goTo('catalog')">📋 Manage Fabrics</button>
-    <button class="btn btn-sky" onclick="goTo('users')">👥 Manage Users</button></div>
+    <button class="btn btn-sky" onclick="goTo('users')">👥 Manage Users</button>
+    ${isAdmin()?`<button class="btn btn-ghost" onclick="updateMasterToken()">🔑 Update Master Token</button>`:''}</div>
   </div>`;
 }
 
@@ -976,10 +1120,12 @@ function pageCatalog(){
     <button class="btn btn-sky btn-sm" onclick="downloadSampleCSV()">📥 Sample CSV</button>
     <button class="btn btn-ghost btn-sm" onclick="showManageCategories()">🏷 Categories</button>`:''}</div></div>
     <div class="search-wrap"><span class="search-ico">⌕</span><input id="cat-search" placeholder="Search fabric..." oninput="renderApp()"><button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('cat-search').value='';renderApp()">Reset</button></div>
-    <div class="tbl-wrap"><table><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th><tr></thead>
+    <div class="tbl-wrap"><table><thead><tr><th>SN</th><th>Name</th><th>GSM</th><th>Width</th><th>Rate</th><th>${adminView?'Stock':'Shades'}</th><th>Actions</th></tr></thead>
     <tbody>${filtered.map(f=>`<tr><td style="color:var(--t3)">${esc(f.sn)}</td>
       <td><strong style="color:var(--gold);cursor:pointer" onclick="viewFabric('${f.id}')">${esc(f.name)}</strong></td>
-      <td>${esc(f.gsm||'—')}</td><td>${esc(f.width||'—')}</td><td class="gold">${esc(f.rate||'—')}</td>
+      <td>${esc(f.gsm||'—')}</td>
+      <td>${esc(f.width||'—')}</td>
+      <td class="gold">${esc(f.rate||'—')}</td>
       <td>${adminView?`<input type="number" class="stock-input" value="${getStockFor(f.name)?.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0)||0}" onchange="updateStockQuantity('${f.name}',this.value)">`
       :`<span class="badge b-broker">${getStockFor(f.name)?.length||0} shade${getStockFor(f.name)?.length!==1?'s':''}</span>`}</td>
       <td class="btn-row">${admin?`<button class="btn btn-sm btn-ghost" onclick="editFabricModal('${f.id}')">Edit</button>
@@ -1016,7 +1162,8 @@ function pageStock(){
       const total=items.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0);
       const fab2 = DB.fabrics.find(f=>f.name.toUpperCase()===name.toUpperCase());
       const catLabel = fab2?.cat || '';
-      tableBody += `<tr><td style="font-weight:600;color:var(--text)">${esc(name)}</td>
+      tableBody += `<tr>
+        <td style="font-weight:600;color:var(--text)">${esc(name)}</td>
         <td>${catLabel ? `<span class="badge b-subadmin">${esc(catLabel)}</span>` : 
           (adminView ? `<button class="btn btn-sm btn-ghost" onclick="assignCategoryToStock('${name.replace(/'/g,"\\'")}')">+ Assign</button>` : '<span style="color:var(--t3)">—</span>')}</td>
         <td style="color:var(--t2)">${items.length}</td>
@@ -1038,13 +1185,13 @@ function pageStock(){
       <option value="">All Categories</option>${cats.map(x=>`<option value="${esc(x)}" ${catFilter===x?'selected':''}>${esc(x)}</option>`).join('')}
     </select>
     <button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('stk-search').value='';document.getElementById('stk-cat-filter').value='';renderApp()">Reset</button></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Fabric Name</th><th>Category</th><th>Variants</th>${adminView?'<th>Total Qty</th><th>Unit</th>':''}<th>Actions</th></tr></thead>
+    <div class="tbl-wrap"><table><thead><tr><th>Fabric Name</th><th>Category</th><th>Variants</th>${adminView?'<th>Total Qty</th><th>Unit</th>':''}<th>Actions</th></table></thead>
     <tbody>${tableBody || '<tr class="empty-row"><td colspan="6">No stock data. Sync from GitHub first.</td>'}</tbody></table></div></div>`;
 }
 
 function clearStock(){
   if(!confirm('Clear all stock data?')) return;
-  STOCK={}; saveToLocal();
+  STOCK={}; scheduleSave();
   addLog('STOCK_CLEAR','Stock data cleared'); showToast('Stock cleared','err'); renderApp();
 }
 
@@ -1069,7 +1216,7 @@ function pageUsers(){
     <div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
     <tbody>${active.map(rowHtml).join('')||'<tr><td colspan="5">No active users</td>'}</tbody></table></div></div>
   <div class="card"><div class="card-head"><span class="card-title">✗ Inactive Users</span></div>
-    <div class="tbl-wrap"></td><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
+    <div class="tbl-wrap"><tr><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Status</th><th>Action</th></tr></thead>
     <tbody>${inactive.map(rowHtml).join('')||'<tr><td colspan="5">No inactive users</td>'}</tbody></table></div></div>`;
 }
 
@@ -1097,10 +1244,10 @@ function pageGitHubStock(){
 ]</pre>
     <div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="downloadSampleStockJSON()">⬇ Download Sample stock.json</button></div>
   </div>
-  <div class="card"><div class="card-head"><span class="card-title">🔗 Shared Database (GitHub Gist)</span></div>
-    <div class="info-box">To share user data across devices, configure GitHub Gist (gist scope token).</div>
-    <div style="display:flex;gap:8px;margin-bottom:8px"><input type="password" id="gist-tok-inp" placeholder="GitHub token (gist scope)" class="set-inp"><button class="btn btn-gold" onclick="saveGistConfig()">Save Gist</button></div>
-    <div style="font-size:.7rem;color:var(--t3)">Token saved locally. All devices with same token will share database.</div>
+  <div class="card"><div class="card-head"><span class="card-title">🔗 Database Security</span></div>
+    <div class="info-box">✅ Data stored in <strong>PRIVATE GitHub Gist</strong>. Only users with master token can access.</div>
+    <div><strong>Gist ID:</strong> <code>${GIST_ID}</code> <button class="btn btn-sm btn-ghost" onclick="navigator.clipboard.writeText(GIST_ID)">Copy</button></div>
+    <div style="margin-top:8px"><strong>Security:</strong> Data is encrypted at rest and transmitted over HTTPS. User passwords are salted and hashed.</div>
   </div>`;
 }
 
@@ -1139,7 +1286,7 @@ function renderApp(){
       <div id="lf"><div class="fld"><label>Mobile / Email</label><input id="l-id" placeholder="9999999999"></div>
         <div class="fld"><label>Password</label><input type="password" id="l-pw"></div>
         <div class="err-msg" id="l-err"></div><button class="auth-btn" onclick="doLogin()">Login</button>
-        <p style="margin-top:13px;font-size:.7rem;text-align:center">Default Admin: 9999999999 / admin123</p></div>
+        <p style="margin-top:13px;font-size:.7rem;text-align:center">Default Admin: 9999999999 / (password set during setup)</p></div>
       <div id="rf" style="display:none"><div class="fld"><label>Full Name *</label><input id="r-name"></div>
         <div class="fld"><label>Mobile *</label><input id="r-mob" maxlength="10"></div>
         <div class="fld"><label>Email</label><input id="r-email"></div>
@@ -1182,7 +1329,6 @@ function renderApp(){
   
   root.innerHTML = sidebar + `<div class="main" id="main-content">${mainHtml}</div>`;
   setTimeout(renderLogTable, 100);
-  startAutoSync();
 }
 
 function goTo(p){ PAGE=p; closeSidebar(); renderApp(); }
@@ -1228,9 +1374,12 @@ window.clearLogs = clearLogs;
 window.renderLogTable = renderLogTable;
 window.showResetModal = showResetModal;
 window.addImageRow = addImageRow;
-window.saveGistConfig = saveGistConfig;
+window.updateMasterToken = updateMasterToken;
 
+// Start the app
 initDB();
+
+let _autoSyncTimer = null;
 </script>
 </body>
 </html>
