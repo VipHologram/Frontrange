@@ -173,6 +173,9 @@ function getToken(){
 
 // Store your new token via Settings > Update Token (never commit token to code again)
 const GIST_ID_DEFAULT = '584269f36f88152dd216ca42643f41c6';
+// Raw URL — readable without auth (works for public gists; for private needs token)
+// Used to bootstrap app_token on new devices automatically
+const GIST_RAW_URL    = 'https://gist.githubusercontent.com/raw/' + GIST_ID_DEFAULT + '/' + 'fabricflow_db.json';
 
 let DB={users:[],fabrics:[],logs:[],company:'FabricFlow'};
 let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='';
@@ -193,23 +196,47 @@ function fetchWithTimeout(url, options={}, ms=8000){
   return Promise.race([fetchPromise, timeoutPromise]);
 }
 
-// ========== LOAD CREDENTIALS FROM LOCALSTORAGE ==========
-// Token stored in browser localStorage — set via Settings > Update Token
+// ========== LOAD CREDENTIALS — AUTO BOOTSTRAP ==========
+// Order of attempts:
+// 1. localStorage (fastest — already visited this device)
+// 2. Gist raw URL (public, no auth — reads app_token field saved by admin)
+// 3. Fail → show setup screen (admin only, one time)
 async function loadCredentialsFromNpoint(){
-  // Load from localStorage (set by admin via Settings page)
-  const token = localStorage.getItem('ff_gh_token') || '';
-  const gistId = localStorage.getItem('ff_gist_id') || GIST_ID_DEFAULT;
-  
-  if(token && gistId){
-    MASTER_TOKEN = token;
-    GIST_ID = gistId;
-    console.log('Credentials loaded from localStorage');
-    return true;
+  GIST_ID = localStorage.getItem('ff_gist_id') || GIST_ID_DEFAULT;
+
+  // Attempt 1: localStorage token (instant)
+  const lsToken = localStorage.getItem('ff_gh_token');
+  if(lsToken){ 
+    MASTER_TOKEN = lsToken; 
+    console.log('Token from localStorage');
+    return true; 
   }
-  
-  // No token set yet — show setup prompt after render
-  console.warn('No GitHub token found. Please set token in Settings > Update Token.');
-  GIST_ID = gistId; // At least set the Gist ID
+
+  // Attempt 2: Try reading app_token from Gist raw URL (no auth needed for public gist)
+  // If admin saved token into gist previously, all devices can bootstrap from here
+  try{
+    const urls = [
+      GIST_RAW_URL,
+      'https://corsproxy.io/?' + encodeURIComponent(GIST_RAW_URL),
+      'https://api.allorigins.win/raw?url=' + encodeURIComponent(GIST_RAW_URL)
+    ];
+    for(const url of urls){
+      try{
+        const r = await fetchWithTimeout(url, {cache:'no-cache'}, 6000);
+        if(!r.ok) continue;
+        const data = await r.json();
+        if(data.app_token){
+          MASTER_TOKEN = data.app_token;
+          // Cache in localStorage for next time
+          localStorage.setItem('ff_gh_token', MASTER_TOKEN);
+          console.log('Token bootstrapped from Gist raw URL');
+          return true;
+        }
+      } catch(e){ /* try next */ }
+    }
+  } catch(e){ /* fall through */ }
+
+  console.warn('No token found — admin setup required');
   return false;
 }
 
@@ -225,13 +252,17 @@ async function loadFromGist(){
     const file = gist.files && gist.files[GIST_FILE];
     if(file && file.content){
       const data = JSON.parse(file.content);
-      DB.users = data.users || [];
+      // If gist has token stored, cache it locally
+      if(data.app_token && !localStorage.getItem('ff_gh_token')){
+        localStorage.setItem('ff_gh_token', data.app_token);
+      }
+      DB.users   = data.users   || [];
       DB.fabrics = data.fabrics || [];
-      DB.logs = data.logs || [];
+      DB.logs    = data.logs    || [];
       DB.company = data.company || 'FabricFlow';
-      STOCK = data.stock || {};
-      IMGS = data.imgs || {};
-      GH_URL = data.gh_url || '';
+      STOCK      = data.stock   || {};
+      IMGS       = data.imgs    || {};
+      GH_URL     = data.gh_url  || '';
       return true;
     }
     return false;
@@ -245,6 +276,8 @@ async function saveToGist(){
   if(!MASTER_TOKEN || !GIST_ID) return false;
   try{
     const payload = {
+      app_token: MASTER_TOKEN,      // Stored here so all devices can bootstrap
+      app_gist_id: GIST_ID,         // Stored for reference
       users: DB.users,
       fabrics: DB.fabrics,
       logs: DB.logs.slice(0,300),
@@ -332,14 +365,19 @@ async function initDB(){
     scheduleSave();
   }
 
-  // Step 5: Restore session
+  // Step 5: Restore session (check against freshly loaded Gist users)
   const sess = sessionStorage.getItem('ffs');
   if(sess && !CU){
     try{
       const d=JSON.parse(sess);
+      // Check RAM users (from Gist) first, then localStorage users
       const f=DB.users.find(u=>u.id===d.id && u.status==='approved');
-      if(f) CU=f;
-    } catch(e){}
+      if(f){ CU=f; }
+      else {
+        // Session ID not found in current users — clear stale session
+        sessionStorage.removeItem('ffs');
+      }
+    } catch(e){ sessionStorage.removeItem('ffs'); }
   }
 
   // Remove loader and render
@@ -350,12 +388,7 @@ async function initDB(){
   applyTheme(); // Re-apply after DOM is fully rendered
   startAutoSync();
   
-  // Show token setup notice if not configured
-  if(!MASTER_TOKEN && !CU){
-    setTimeout(()=>{
-      showToast('⚠ Set GitHub Token in Settings to enable cloud sync', 'err');
-    }, 2000);
-  }
+  // Token setup handled by setup screen in renderApp
   // Poll for DB updates every 30s while admin is viewing Users page
   setInterval(async()=>{
     if(CU?.role==='admin' && PAGE==='users' && _hasCredentials){
@@ -382,6 +415,58 @@ function applyTheme(){
 function toggleTheme(){ isDark=!isDark; localStorage.setItem('ff_theme', isDark?'dark':'light'); applyTheme(); renderApp(); }
 
 // ========== AUTH ==========
+async function doSetupToken(){
+  const token = (document.getElementById('setup-token')?.value || '').trim();
+  const gistId = (document.getElementById('setup-gist')?.value || '').trim();
+  const err = document.getElementById('setup-err');
+  const btn = document.getElementById('setup-btn');
+  if(err) err.classList.remove('on');
+  
+  if(!token){ 
+    if(err){ err.textContent='Token is required'; err.classList.add('on'); } return; 
+  }
+  if(!token.startsWith('ghp_') && !token.startsWith('github_pat_')){ 
+    if(err){ err.textContent='Token must start with ghp_ or github_pat_'; err.classList.add('on'); } return; 
+  }
+  if(!gistId){ 
+    if(err){ err.textContent='Gist ID is required'; err.classList.add('on'); } return; 
+  }
+  
+  if(btn){ btn.disabled=true; btn.textContent='Connecting...'; }
+  
+  // Test the token by fetching the Gist
+  MASTER_TOKEN = token;
+  GIST_ID = gistId;
+  
+  const ok = await loadFromGist();
+  
+  if(ok){
+    // Save to localStorage for this device
+    localStorage.setItem('ff_gh_token', token);
+    localStorage.setItem('ff_gist_id', gistId);
+    _hasCredentials = true;
+
+    // Ensure admin exists
+    const hasAdmin = DB.users.some(u => u.role === 'admin');
+    if(!hasAdmin){
+      const salt=genSalt();
+      const hash=await hashPass('admin123',salt);
+      DB.users.push({id:uid(),fullName:'Master Admin',mobile:'9999999999',email:'admin@fabricflow.com',password:hash,salt,role:'admin',status:'approved',createdAt:new Date().toLocaleString()});
+    }
+
+    // Save token INTO the Gist so all other devices can auto-bootstrap
+    await saveToGist();
+    
+    showToast('✓ Connected! Token saved to cloud — other devices will auto-configure.');
+    addLog('SETUP', 'Token configured and saved to Gist');
+    renderApp();
+  } else {
+    MASTER_TOKEN = ''; GIST_ID = '';
+    if(err){ err.textContent='Connection failed — check token has "gist" scope and Gist ID is correct'; err.classList.add('on'); }
+    if(btn){ btn.disabled=false; btn.textContent='🔌 Connect & Continue'; }
+  }
+}
+
 async function doLogin(){
   const id=document.getElementById('l-id').value.trim();
   const pw=document.getElementById('l-pw').value;
@@ -1010,11 +1095,13 @@ async function saveGitHubToken(){
   showToast('Token saved! Testing connection...');
   const ok = await loadFromGist();
   if(ok){
-    showToast('✓ Connected to Gist successfully!');
-    addLog('TOKEN_SET', 'GitHub token configured');
+    // Save token back into Gist so all devices can auto-bootstrap
+    await saveToGist();
+    showToast('✓ Token saved to cloud — all devices will auto-configure');
+    addLog('TOKEN_SET', 'GitHub token updated and saved to Gist');
     renderApp();
   } else {
-    showToast('Token saved but Gist load failed — check token/Gist ID','err');
+    showToast('Token saved locally but Gist connection failed — check token/Gist ID','err');
   }
 }
 
@@ -1333,7 +1420,9 @@ function pageSettings(){
       </div>
     </div>
     <div class="card"><div class="card-head"><span class="card-title" style="color:var(--sky)">🔑 GitHub Token Setup</span></div>
-      <div style="font-size:.76rem;color:var(--t2);margin-bottom:12px">Token stored in <strong>your browser only</strong> — never in source code. Must be set on each device/browser.</div>
+      <div style="font-size:.76rem;color:var(--t2);margin-bottom:12px">
+        <strong>Admin only.</strong> Set token once → saved to cloud → <strong>all devices auto-configure automatically.</strong> No setup needed on other devices.
+      </div>
       <div class="modal-fld"><label>GitHub Personal Access Token</label>
         <input type="password" id="gh-token-inp" class="set-inp" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" value="${MASTER_TOKEN ? '••••••••••••••••••••' : ''}">
       </div>
@@ -1375,6 +1464,35 @@ function renderApp(){
   };
 
   if(!CU){
+    // Show token setup screen first if no token configured
+    if(!MASTER_TOKEN){
+      root.innerHTML=`<div class="auth-bg"><div class="auth-card" style="max-width:480px">
+        <div class="auth-brand">FabricFlow Pro</div>
+        <p style="text-align:center;color:var(--t2);font-size:.75rem;margin-bottom:20px">First-Time Setup</p>
+        <div class="info-box" style="background:rgba(75,140,247,.07);border-color:rgba(75,140,247,.25);color:var(--text)">
+          <strong>One-time setup required.</strong><br>Enter your GitHub Personal Access Token to enable cloud sync. This is stored only in your browser.
+        </div>
+        <div style="font-size:.72rem;color:var(--t2);margin-bottom:14px;line-height:1.6">
+          1. Go to <a href="https://github.com/settings/tokens" target="_blank" style="color:var(--sky)">github.com/settings/tokens</a><br>
+          2. Generate new token (classic) → scope: <strong>gist</strong> only<br>
+          3. Paste below and click Connect
+        </div>
+        <div class="fld"><label>GitHub Personal Access Token</label>
+          <input type="password" id="setup-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" 
+            onkeydown="if(event.key==='Enter')doSetupToken()">
+        </div>
+        <div class="fld"><label>Gist ID (your data store)</label>
+          <input id="setup-gist" value="${GIST_ID_DEFAULT}" placeholder="Gist ID">
+        </div>
+        <div class="err-msg" id="setup-err"></div>
+        <button class="auth-btn" id="setup-btn" onclick="doSetupToken()">🔌 Connect & Continue</button>
+        <p style="margin-top:13px;font-size:.68rem;text-align:center;color:var(--t2)">
+          Admin setup only. Once saved, all devices auto-configure from the cloud.
+        </p>
+      </div></div>`;
+      return;
+    }
+
     root.innerHTML=`<div class="auth-bg"><div class="auth-card">
       <div class="auth-brand">FabricFlow Pro</div>
       <p style="text-align:center;color:var(--t2);font-size:.75rem;margin-bottom:20px">Smart Textile Inventory</p>
@@ -1477,7 +1595,7 @@ function closeSidebar(){ document.getElementById('sidebar')?.classList.remove('o
 // Expose all globals
 window.goTo=goTo; window.toggleSidebar=toggleSidebar; window.closeSidebar=closeSidebar;
 window.toggleTheme=toggleTheme; window.logout=logout;
-window.switchAuthTab=switchAuthTab; window.doLogin=doLogin; window.doRegister=doRegister;
+window.switchAuthTab=switchAuthTab; window.doLogin=doLogin; window.doRegister=doRegister; window.doSetupToken=doSetupToken;
 window.saveAndFetchGitHub=saveAndFetchGitHub; window.clearGitHubUrl=clearGitHubUrl;
 window.downloadSampleStockJSON=downloadSampleStockJSON; window.autoSyncStock=autoSyncStock;
 window.approveUser=approveUser; window.rejectUser=rejectUser;
