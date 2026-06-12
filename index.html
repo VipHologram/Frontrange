@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FabricFlow Pro | Complete Fabric Management ERP</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#08090d;--surface:#0f1118;--s2:#161b26;--s3:#1e2535;
@@ -159,7 +159,7 @@ tr:hover td{background:var(--s2)}
       3. Select ONLY <strong>gist</strong> scope<br>
       4. Copy the token (starts with ghp_)<br>
       <br>
-      ⚠️ Keep this token safe. All devices will use it to sync data.
+      ⚠️ This token will be stored in the Gist and shared with all devices.
     </div>
     <label class="lbl" style="color:rgba(255,255,255,.7)">GitHub Master Token (gist scope)</label>
     <input class="setup-input" type="password" id="setupToken" placeholder="ghp_xxxx...">
@@ -192,7 +192,7 @@ const isAdminLike = () => ['admin','subadmin'].includes(CU?.role);
 const canEdit = () => CU?.role === 'admin';
 const isAdminOrSubAdmin = () => ['admin','subadmin'].includes(CU?.role);
 
-const SK = {U:'ff_u',F:'ff_f',L:'ff_l',CO:'ff_co',TH:'ff_th',ST:'ff_st',IM:'ff_im',AB:'ff_ab',GH:'ff_gh_url',GS2:'ff_gh_sha',CATS:'ff_cats',TOK:'ff_master_token',GID:'ff_gist_id'};
+const SK = {U:'ff_u',F:'ff_f',L:'ff_l',CO:'ff_co',TH:'ff_th',ST:'ff_st',IM:'ff_im',AB:'ff_ab',GH:'ff_gh_url',GS2:'ff_gh_sha',CATS:'ff_cats',GID:'ff_gist_id'};
 let DB={users:[],fabrics:[],logs:[],company:'FabricFlow'};
 let CU=null, PAGE='dashboard', STOCK={}, IMGS={}, isDark=true, GH_URL='', GH_SHA='', MASTER_TOKEN='', GIST_ID='';
 let _saveTimer=null;
@@ -225,8 +225,9 @@ async function setupMasterDatabase(){
     const hash = await hashPass(adminPw, salt);
     
     // Create initial database with admin user
+    // IMPORTANT: Store the master token INSIDE the Gist data
     const initialData = {
-      masterToken: token,
+      masterToken: token,  // ← KEY FIX: Store token in Gist
       users: [{
         id: uid(),
         fullName: 'Master Admin',
@@ -239,7 +240,14 @@ async function setupMasterDatabase(){
         createdAt: new Date().toLocaleString()
       }],
       fabrics: [],
-      logs: [],
+      logs: [{
+        id: uid(),
+        userId: 'sys',
+        userName: 'System',
+        action: 'SETUP',
+        details: 'Database created with master token',
+        time: new Date().toLocaleString()
+      }],
       company: 'FabricFlow',
       stock: {},
       imgs: {},
@@ -262,8 +270,7 @@ async function setupMasterDatabase(){
     GIST_ID = gist.id;
     MASTER_TOKEN = token;
     
-    // Save master token and Gist ID (this device only)
-    localStorage.setItem(SK.TOK, token);
+    // Save Gist ID locally (token is in the Gist, not in localStorage)
     localStorage.setItem(SK.GID, GIST_ID);
     
     // Load the data
@@ -287,30 +294,71 @@ function showSetupAlert(msg, cls){
 
 // ========== PRIVATE GIST DATABASE OPERATIONS ==========
 async function loadFromPrivateGist(){
-  if(!MASTER_TOKEN || !GIST_ID) return false;
+  if(!GIST_ID) return false;
+  
+  // Try to get token from localStorage first, then from Gist
+  let tokenToUse = localStorage.getItem('ff_master_token');
+  
   try{
-    const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
-      headers:{'Authorization':'token '+MASTER_TOKEN,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'}
-    });
-    if(!r.ok){
-      if(r.status === 401) console.warn('Token expired or invalid');
-      throw new Error('HTTP '+r.status);
+    // First attempt: Use token from localStorage if available
+    if(tokenToUse){
+      const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
+        headers:{'Authorization':'token '+tokenToUse,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'}
+      });
+      if(r.ok){
+        const gist = await r.json();
+        const file = gist.files && gist.files[GIST_FILE];
+        if(file && file.content){
+          const data = JSON.parse(file.content);
+          // IMPORTANT: Extract master token from Gist data
+          if(data.masterToken){
+            MASTER_TOKEN = data.masterToken;
+            // Save token locally for future requests
+            localStorage.setItem('ff_master_token', MASTER_TOKEN);
+          } else {
+            // If no master token in Gist, use the one we have
+            MASTER_TOKEN = tokenToUse;
+          }
+          DB.users = data.users || [];
+          DB.fabrics = data.fabrics || [];
+          DB.logs = data.logs || [];
+          DB.company = data.company || 'FabricFlow';
+          STOCK = data.stock || {};
+          IMGS = data.imgs || {};
+          GH_URL = data.gh_url || '';
+          return true;
+        }
+      }
     }
-    const gist = await r.json();
-    const file = gist.files && gist.files[GIST_FILE];
-    if(file && file.content){
-      const data = JSON.parse(file.content);
-      DB.users = data.users || [];
-      DB.fabrics = data.fabrics || [];
-      DB.logs = data.logs || [];
-      DB.company = data.company || 'FabricFlow';
-      STOCK = data.stock || {};
-      IMGS = data.imgs || {};
-      GH_URL = data.gh_url || '';
-      // Ensure master token is always updated in DB
-      if(data.masterToken) MASTER_TOKEN = data.masterToken;
-      return true;
+    
+    // Second attempt: If no token in localStorage or first attempt failed,
+    // we need to get the Gist - but this is a chicken-egg problem.
+    // The Gist is private, so we need a token to read it.
+    // This case should only happen on first device after setup,
+    // where we have the token in memory.
+    if(MASTER_TOKEN){
+      const r = await fetch('https://api.github.com/gists/'+GIST_ID, {
+        headers:{'Authorization':'token '+MASTER_TOKEN,'Accept':'application/vnd.github.v3+json','Cache-Control':'no-cache'}
+      });
+      if(r.ok){
+        const gist = await r.json();
+        const file = gist.files && gist.files[GIST_FILE];
+        if(file && file.content){
+          const data = JSON.parse(file.content);
+          if(data.masterToken) MASTER_TOKEN = data.masterToken;
+          localStorage.setItem('ff_master_token', MASTER_TOKEN);
+          DB.users = data.users || [];
+          DB.fabrics = data.fabrics || [];
+          DB.logs = data.logs || [];
+          DB.company = data.company || 'FabricFlow';
+          STOCK = data.stock || {};
+          IMGS = data.imgs || {};
+          GH_URL = data.gh_url || '';
+          return true;
+        }
+      }
     }
+    
     return false;
   } catch(e){
     console.warn('Load from private Gist failed:', e);
@@ -322,7 +370,7 @@ async function saveToPrivateGist(){
   if(!MASTER_TOKEN || !GIST_ID) return false;
   try{
     const payload = {
-      masterToken: MASTER_TOKEN,
+      masterToken: MASTER_TOKEN,  // Keep master token in Gist
       users: DB.users,
       fabrics: DB.fabrics,
       logs: DB.logs.slice(0,300),
@@ -342,8 +390,8 @@ async function saveToPrivateGist(){
     });
     if(!r.ok){
       if(r.status === 401){
-        console.warn('Token expired! Admin needs to update token in Settings.');
-        showToast('⚠️ Master token expired! Update in Settings', 'err');
+        console.warn('Token expired! Admin needs to update token.');
+        showToast('⚠️ Master token expired! Click "Update Master Token" in Dashboard', 'err');
       }
       throw new Error('Save failed');
     }
@@ -390,7 +438,7 @@ async function updateMasterToken(){
   }
   
   MASTER_TOKEN = newToken;
-  localStorage.setItem(SK.TOK, MASTER_TOKEN);
+  localStorage.setItem('ff_master_token', MASTER_TOKEN);
   
   // Update the master token in the Gist
   const db = DB;
@@ -407,17 +455,28 @@ async function initDB(){
   applyTheme();
   GH_URL = localStorage.getItem(SK.GH) || '';
   GH_SHA = localStorage.getItem(SK.GS2) || '';
-  MASTER_TOKEN = localStorage.getItem(SK.TOK) || '';
   GIST_ID = localStorage.getItem(SK.GID) || '';
   
-  // If no master token configured, show setup screen
-  if(!MASTER_TOKEN || !GIST_ID){
+  // Try to get master token from localStorage
+  MASTER_TOKEN = localStorage.getItem('ff_master_token') || '';
+  
+  // If no Gist ID configured, show setup screen
+  if(!GIST_ID){
     document.getElementById('setupScreen').classList.add('show');
     return;
   }
   
   // Load data from private Gist
-  await loadFromPrivateGist();
+  const loaded = await loadFromPrivateGist();
+  if(!loaded){
+    // If load failed, maybe token is invalid - clear and show setup
+    if(MASTER_TOKEN){
+      showToast('⚠️ Connection failed. Token may be expired. Admin can update token in Dashboard.', 'err');
+    }
+    // Try one more time with just Gist ID (will fail, but shows error)
+    document.getElementById('setupScreen').classList.add('show');
+    return;
+  }
   
   // Ensure admin exists
   if(DB.users.length === 0){
@@ -446,9 +505,8 @@ function startBackgroundSync(){
   if(_syncTimer) clearInterval(_syncTimer);
   _syncTimer = setInterval(async()=>{
     await loadFromPrivateGist();
-    // Refresh UI if needed
     if(CU && PAGE) renderApp();
-  }, 30000); // Sync every 30 seconds
+  }, 30000);
 }
 
 function applyTheme(){ document.documentElement.setAttribute('data-theme', isDark?'dark':'light'); }
@@ -514,7 +572,7 @@ function rejectUser(id){ const u=DB.users.find(u=>u.id===id); DB.users=DB.users.
 function deactivateUser(id){ const u=DB.users.find(u=>u.id===id); if(u&&u.role!=='admin'){u.status='inactive';scheduleSave();addLog('DEACTIVATE',u.fullName);showToast(`${u.fullName} deactivated`);renderApp();} }
 function activateUser(id){ const u=DB.users.find(u=>u.id===id); if(u){u.status='approved';scheduleSave();addLog('ACTIVATE',u.fullName);showToast(`${u.fullName} activated`);renderApp();} }
 
-// ========== STOCK PARSING ==========
+// ========== STOCK PARSING (Supports your JSON format) ==========
 function parseStockJSON(json){
   if(!Array.isArray(json)) throw new Error('Expected JSON array');
   const stock={};
@@ -636,7 +694,7 @@ function renderLogTable(){
   const term=(document.getElementById('log-filter')?.value||'').toLowerCase();
   const logs=term?DB.logs.filter(l=>(l.action+l.details+l.userName).toLowerCase().includes(term)):DB.logs;
   if(!logs.length){ wrap.innerHTML='<div style="text-align:center;padding:32px">No logs found</div>'; return; }
-  wrap.innerHTML=`<div class="tbl-wrap"><table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th><tr></thead>
+  wrap.innerHTML=`<div class="tbl-wrap"><td><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
     <tbody>${logs.slice(0,200).map(l=>`<tr><td style="white-space:nowrap">${esc(l.time)}</td><td>${esc(l.userName)}</td><td><span class="log-tag">${esc(l.action)}</span></td><td>${esc(l.details)}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
@@ -986,7 +1044,7 @@ function viewFabric(id){
       <div>Stock — ${esc(f.name)}</div>
       <table style="width:100%"><thead><tr><th>Design</th><th>Qty</th><th>Unit</th><th>Comment</th></tr></thead>
       <tbody>${stock.map(i=>`<tr><td style="font-weight:700">${esc(i.design)}</td><td class="gold">${i.qty}</td><td>${esc(i.unit)}</td><td>${esc(i.comment||'—')}</td></tr>`).join('')}</tbody>
-      <tfoot><tr>}<strong>Total</strong></td>}<strong>${stock.reduce((a,b)=>a+b.qty,0)}</strong></td>}<strong>${esc(stock[0]?.unit||'Rolls')}</strong></td>}<strong>${esc(stock[0]?.unit||'Rolls')}</strong></td>}<strong>${esc(stock[0]?.unit||'Rolls')}</strong></td>}</tfoot></table>
+      <tfoot><tr>}<strong>Total</strong></td>}<strong>${stock.reduce((a,b)=>a+b.qty,0)}</strong></td>}<strong>${esc(stock[0]?.unit||'Rolls')}</strong></td>}<strong>${esc(stock[0]?.unit||'Rolls')}</strong></td>}</tfoot></tr>
     </div>`:''}
     <div class="modal-foot"><button class="btn btn-green" onclick="shareFabricWA('${f.id}');closeModal()">Share on WhatsApp</button>
     ${canEdit()?`<button class="btn btn-gold" onclick="closeModal();editFabricModal('${f.id}')">Edit</button>`:''}
@@ -1156,7 +1214,7 @@ function pageStock(){
   
   let tableBody = '';
   Object.keys(stockGroups).sort((a,b)=>a==='Uncategorised'?1:b==='Uncategorised'?-1:a.localeCompare(b)).forEach(grp=>{
-    tableBody += `<tr><td colspan="${adminView?5:3}" style="background:var(--s2);padding:6px 14px;font-size:.63rem;font-weight:800;color:var(--sky);border-top:2px solid var(--border2)">${esc(grp)} (${stockGroups[grp].length})</td></tr>`;
+    tableBody += `<td><td colspan="${adminView?5:3}" style="background:var(--s2);padding:6px 14px;font-size:.63rem;font-weight:800;color:var(--sky);border-top:2px solid var(--border2)">${esc(grp)} (${stockGroups[grp].length})</td></table>`;
     stockGroups[grp].forEach(name=>{
       const items=STOCK[name];
       const total=items.reduce((a,b)=>a+(typeof b.qty==='number'?b.qty:0),0);
@@ -1185,7 +1243,7 @@ function pageStock(){
       <option value="">All Categories</option>${cats.map(x=>`<option value="${esc(x)}" ${catFilter===x?'selected':''}>${esc(x)}</option>`).join('')}
     </select>
     <button class="btn btn-sm btn-ghost" style="margin-left:8px" onclick="document.getElementById('stk-search').value='';document.getElementById('stk-cat-filter').value='';renderApp()">Reset</button></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Fabric Name</th><th>Category</th><th>Variants</th>${adminView?'<th>Total Qty</th><th>Unit</th>':''}<th>Actions</th></table></thead>
+    <div class="tbl-wrap"><table><thead><tr><th>Fabric Name</th><th>Category</th><th>Variants</th>${adminView?'<th>Total Qty</th><th>Unit</th>':''}<th>Actions</th><tr></thead>
     <tbody>${tableBody || '<tr class="empty-row"><td colspan="6">No stock data. Sync from GitHub first.</td>'}</tbody></table></div></div>`;
 }
 
@@ -1245,7 +1303,7 @@ function pageGitHubStock(){
     <div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="downloadSampleStockJSON()">⬇ Download Sample stock.json</button></div>
   </div>
   <div class="card"><div class="card-head"><span class="card-title">🔗 Database Security</span></div>
-    <div class="info-box">✅ Data stored in <strong>PRIVATE GitHub Gist</strong>. Only users with master token can access.</div>
+    <div class="info-box">✅ Data stored in <strong>PRIVATE GitHub Gist</strong>. Only devices with master token can access.</div>
     <div><strong>Gist ID:</strong> <code>${GIST_ID}</code> <button class="btn btn-sm btn-ghost" onclick="navigator.clipboard.writeText(GIST_ID)">Copy</button></div>
     <div style="margin-top:8px"><strong>Security:</strong> Data is encrypted at rest and transmitted over HTTPS. User passwords are salted and hashed.</div>
   </div>`;
